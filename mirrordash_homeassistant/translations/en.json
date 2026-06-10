@@ -1,0 +1,20 @@
+{
+  "title": "Home Assistant",
+  "last_checked": "Last checked",
+  "connection_error": "Connection error",
+  "no_token": "API Token is missing",
+  "no_entities": "No entities configured",
+  "entity_not_found": "Entity not found",
+  "unreachable": "Could not connect to Home Assistant",
+  
+  "state_on": "On",
+  "state_off": "Off",
+  "state_open": "Open",
+  "state_closed": "Closed",
+  "state_locked": "Locked",
+  "state_unlocked": "Unlocked",
+  "state_motion_detected": "Active",
+  "state_motion_clear": "Clear",
+  "state_running": "Running",
+  "state_idle": "Idle"
+}

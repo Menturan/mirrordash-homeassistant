@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Home Assistant Settings",
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "title": "Enabled",
+      "description": "Enable or disable this module."
+    },
+    "position": {
+      "type": "string",
+      "default": "middle_left",
+      "enum": [
+        "top_left",
+        "top_center",
+        "top_right",
+        "middle_left",
+        "middle_center",
+        "middle_right",
+        "bottom_left",
+        "bottom_center",
+        "bottom_right"
+      ],
+      "title": "Screen Position",
+      "description": "Where to display this module on the mirror screen."
+    },
+    "interval": {
+      "type": "integer",
+      "default": 30,
+      "title": "Update Interval (Seconds)",
+      "description": "Time to wait between state updates."
+    },
+    "url": {
+      "type": "string",
+      "default": "http://homeassistant.local:8123",
+      "title": "Home Assistant URL",
+      "description": "The base URL of your local Home Assistant instance."
+    },
+    "token": {
+      "type": "string",
+      "title": "Long-Lived Access Token",
+      "description": "Long-Lived Access Token created in your Home Assistant profile settings."
+    },
+    "entities": {
+      "type": "array",
+      "title": "Tracked Entities",
+      "description": "List of Home Assistant entity IDs to display.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "title": "Entity ID",
+            "description": "The full entity ID from Home Assistant (e.g. sensor.living_room_temp, light.kitchen)."
+          },
+          "custom_name": {
+            "type": "string",
+            "title": "Custom Name (Optional)",
+            "description": "Override the friendly name from Home Assistant."
+          },
+          "custom_icon": {
+            "type": "string",
+            "title": "Custom Lucide Icon (Optional)",
+            "description": "Lucide icon name to show next to this entity (e.g., thermometer, lightbulb, home). If omitted, falls back to a default based on entity domain."
+          }
+        },
+        "required": ["entity_id"]
+      }
+    }
+  },
+  "required": ["enabled", "position", "interval", "url"]
+}

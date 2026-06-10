@@ -1,0 +1,168 @@
+<div class="ha-container">
+    {% if not error or entities %}
+        <h2 class="module-header">{{ translations.get("title", "Hemautomation") }}</h2>
+    {% endif %}
+    
+    <div class="ha-body">
+        {% if error %}
+            <div class="ha-error">
+                <i data-lucide="alert-circle" class="ha-error-icon"></i>
+                <span>{{ error }}</span>
+            </div>
+        {% endif %}
+        
+        {% if entities %}
+            <div class="ha-entities">
+                {% for entity in entities %}
+                    <div class="ha-entity">
+                        <div class="ha-entity-left">
+                            <span class="ha-entity-icon {% if entity.is_active %}ha-icon-active{% else %}ha-icon-inactive{% endif %}">
+                                <i data-lucide="{{ entity.icon }}"></i>
+                            </span>
+                            <span class="ha-entity-name" title="{{ entity.name }}">{{ entity.name }}</span>
+                        </div>
+                        <div class="ha-entity-state {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">
+                            {{ entity.state }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.ha-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    color: var(--color-standard-gray, #999999);
+    font-family: var(--mirror-font-family, sans-serif);
+}
+
+/* Align module header and items based on position */
+#top_right .ha-container,
+#middle_right .ha-container,
+#bottom_right .ha-container {
+    align-items: flex-end;
+    text-align: right;
+}
+
+#top_left .ha-container,
+#middle_left .ha-container,
+#bottom_left .ha-container {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.ha-body {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.ha-entities {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ha-entity {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 16px;
+    font-size: 14px;
+    animation: haFadeIn 0.5s ease-out;
+}
+
+/* Dynamic layout snapping adjustment */
+#top_right .ha-entity,
+#middle_right .ha-entity,
+#bottom_right .ha-entity {
+    flex-direction: row-reverse;
+}
+
+.ha-entity-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+}
+
+#top_right .ha-entity-left,
+#middle_right .ha-entity-left,
+#bottom_right .ha-entity-left {
+    flex-direction: row-reverse;
+}
+
+.ha-entity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ha-entity-icon i {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5px;
+}
+
+.ha-icon-active i {
+    color: var(--color-high-contrast, #ffffff);
+}
+
+.ha-icon-inactive i {
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-entity-name {
+    font-weight: 400;
+    color: var(--color-standard-gray, #999999);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ha-entity-state {
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ha-text-active {
+    color: var(--color-high-contrast, #ffffff);
+}
+
+.ha-text-inactive {
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-text-error {
+    color: var(--color-error, #ffb4ab);
+}
+
+.ha-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-error, #ffb4ab);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+.ha-error-icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5px;
+    flex-shrink: 0;
+}
+
+@keyframes haFadeIn {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>

@@ -1,0 +1,20 @@
+{
+  "title": "Hemautomation",
+  "last_checked": "Senast kontrollerad",
+  "connection_error": "Anslutningsfel",
+  "no_token": "API-token saknas",
+  "no_entities": "Inga entiteter konfigurerade",
+  "entity_not_found": "Entitet hittades ej",
+  "unreachable": "Kunde inte ansluta till Home Assistant",
+  
+  "state_on": "På",
+  "state_off": "Av",
+  "state_open": "Öppen",
+  "state_closed": "Stängd",
+  "state_locked": "Låst",
+  "state_unlocked": "Upplåst",
+  "state_motion_detected": "Rörelse",
+  "state_motion_clear": "Ingen rörelse",
+  "state_running": "Körs",
+  "state_idle": "Klar"
+}
