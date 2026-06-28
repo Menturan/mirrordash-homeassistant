@@ -50,5 +50,9 @@ To communicate with your Home Assistant instance, you must generate a token:
 4. Click **Create Token**, give it a name (e.g., `MirrorDash`), and copy the generated token.
 5. Paste this token into the `"token"` field in the module configuration.
 
+## Screenshot
+
+![Home Assistant Widget Screenshot](screenshot.png)
+
 ## License
-MIT
+[PolyForm Noncommercial License 1.0.0](LICENSE.md)

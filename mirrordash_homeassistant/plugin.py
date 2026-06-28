@@ -123,8 +123,13 @@ class HomeassistantModule:
         
         logger.info(f"Initializing {self.name} module")
 
-    def translate(self, key, default=None):
-        return self.translations.get(key, default)
+    def translate(self, key: str, default: str = None) -> str:
+        if not hasattr(self, "translations") or not self.translations:
+            return default if default is not None else key
+        val = self.translations.get(key)
+        if val is not None:
+            return val
+        return default if default is not None else key
 
     async def fetch_all_states(self, base_url, token, entity_configs):
         async def fetch_one(entity_config):
