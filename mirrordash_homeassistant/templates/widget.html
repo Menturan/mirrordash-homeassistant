@@ -1,5 +1,5 @@
 <div class="ha-container">
-    {% if not error or entities %}
+    {% if show_header and (not error or entities) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}
     

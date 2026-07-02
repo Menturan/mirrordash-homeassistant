@@ -49,6 +49,12 @@
       "title": "Custom Heading",
       "description": "Custom title to display as the module header (overrides default)."
     },
+    "show_header": {
+      "type": "boolean",
+      "default": true,
+      "title": "Show Header",
+      "description": "Show or hide the module's header/title."
+    },
     "entities": {
       "type": "array",
       "title": "Tracked Entities",

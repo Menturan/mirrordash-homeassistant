@@ -180,6 +180,7 @@ class HomeassistantModule:
                 token = self.config.get("token")
                 entity_configs = self.config.get("entities", [])
                 heading = self.config.get("heading", "")
+                show_header = self.config.get("show_header", True)
                 
                 # Check for token
                 if not token:
@@ -187,7 +188,8 @@ class HomeassistantModule:
                         "widget.html",
                         error=self.translate("no_token", "API Token is missing"),
                         entities=[],
-                        heading=heading
+                        heading=heading,
+                        show_header=show_header
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -199,7 +201,8 @@ class HomeassistantModule:
                         "widget.html",
                         error=self.translate("no_entities", "No entities configured"),
                         entities=[],
-                        heading=heading
+                        heading=heading,
+                        show_header=show_header
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -216,7 +219,8 @@ class HomeassistantModule:
                         entities=entities,
                         error=self.translate("connection_error", "Connection error") if all_failed else None,
                         last_checked=datetime.now().strftime("%H:%M"),
-                        heading=heading
+                        heading=heading,
+                        show_header=show_header
                     )
                 except Exception as fetch_err:
                     logger.error(f"Error fetching states: {fetch_err}")
@@ -224,7 +228,8 @@ class HomeassistantModule:
                         "widget.html",
                         entities=[],
                         error=self.translate("unreachable", "Could not connect to Home Assistant"),
-                        heading=heading
+                        heading=heading,
+                        show_header=show_header
                     )
                 
                 await broadcast_func(self.name, html)
