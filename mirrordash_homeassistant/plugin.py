@@ -179,13 +179,15 @@ class HomeassistantModule:
                 url = self.config.get("url", "http://homeassistant.local:8123")
                 token = self.config.get("token")
                 entity_configs = self.config.get("entities", [])
+                heading = self.config.get("heading", "")
                 
                 # Check for token
                 if not token:
                     html = self.render_template(
                         "widget.html",
                         error=self.translate("no_token", "API Token is missing"),
-                        entities=[]
+                        entities=[],
+                        heading=heading
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -196,7 +198,8 @@ class HomeassistantModule:
                     html = self.render_template(
                         "widget.html",
                         error=self.translate("no_entities", "No entities configured"),
-                        entities=[]
+                        entities=[],
+                        heading=heading
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -212,14 +215,16 @@ class HomeassistantModule:
                         "widget.html",
                         entities=entities,
                         error=self.translate("connection_error", "Connection error") if all_failed else None,
-                        last_checked=datetime.now().strftime("%H:%M")
+                        last_checked=datetime.now().strftime("%H:%M"),
+                        heading=heading
                     )
                 except Exception as fetch_err:
                     logger.error(f"Error fetching states: {fetch_err}")
                     html = self.render_template(
                         "widget.html",
                         entities=[],
-                        error=self.translate("unreachable", "Could not connect to Home Assistant")
+                        error=self.translate("unreachable", "Could not connect to Home Assistant"),
+                        heading=heading
                     )
                 
                 await broadcast_func(self.name, html)
