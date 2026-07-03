@@ -14,55 +14,56 @@
         {% if groups %}
             <div class="ha-groups">
                 {% for group in groups %}
-                    {% if group.entities %}
-                        <div class="ha-group">
-                            {% if group.name %}
-                                <div class="ha-group-title">{{ group.name }}</div>
-                            {% endif %}
-                            
-                            {% if group.layout == "compact" %}
-                                <!-- Layout Option A.3: Compact Vertical List -->
-                                <div class="ha-entities ha-compact-list">
-                                    {% for entity in group.entities %}
-                                        <div class="ha-compact-item">
-                                            <div class="ha-compact-row">
-                                                <span class="ha-compact-label">
-                                                    {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch') %}
-                                                        <span class="ha-status-pip active"></span>
-                                                    {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' %}
-                                                        <span class="ha-status-pip"></span>
-                                                    {% endif %}
-                                                    <i data-lucide="{{ entity.icon }}" class="{% if entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}"></i>
-                                                    {{ entity.name }}
-                                                </span>
-                                                <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
-                                            </div>
-                                            {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
-                                                <div class="ha-compact-metadata">
-                                                    {% if entity.humidity is not none and entity.humidity != "" %}
-                                                        <span class="ha-meta-inline"><i data-lucide="droplet"></i> Hum: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
-                                                    {% endif %}
-                                                    {% if entity.battery is not none and entity.battery != "" %}
-                                                        <span class="ha-meta-inline"><i data-lucide="battery"></i> Battery: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
-                                                    {% endif %}
-                                                    {% if entity.linkquality is not none and entity.linkquality != "" %}
-                                                        <span class="ha-meta-inline"><i data-lucide="wifi"></i> Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
-                                                    {% endif %}
-                                                    {% if entity.voltage is not none and entity.voltage != "" %}
-                                                        <span class="ha-meta-inline"><i data-lucide="activity"></i> Volt: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
-                                                    {% endif %}
+                    <div class="ha-group">
+                        {% if group.name %}
+                            <div class="ha-group-title">{{ group.name }}</div>
+                        {% endif %}
+                        
+                        <div class="ha-group-blocks">
+                            {% for block in group.blocks %}
+                                {% if block.type == "compact" %}
+                                    <!-- Layout Option A.3: Compact Vertical List -->
+                                    <div class="ha-entities ha-compact-list">
+                                        {% for entity in block.entities %}
+                                            <div class="ha-compact-item">
+                                                <div class="ha-compact-row">
+                                                    <span class="ha-compact-label">
+                                                        {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch') %}
+                                                            <span class="ha-status-pip active"></span>
+                                                        {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' %}
+                                                            <span class="ha-status-pip"></span>
+                                                        {% endif %}
+                                                        <i data-lucide="{{ entity.icon }}" class="{% if entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}"></i>
+                                                        {{ entity.name }}
+                                                    </span>
+                                                    <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
                                                 </div>
-                                            {% endif %}
-                                            {% if not loop.last %}
-                                                <div class="ha-compact-separator"></div>
-                                            {% endif %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
-                                <div class="ha-entities ha-detailed">
-                                    {% for entity in group.entities %}
+                                                {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
+                                                    <div class="ha-compact-metadata">
+                                                        {% if entity.humidity is not none and entity.humidity != "" %}
+                                                            <span class="ha-meta-inline"><i data-lucide="droplet"></i> Hum: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
+                                                        {% endif %}
+                                                        {% if entity.battery is not none and entity.battery != "" %}
+                                                            <span class="ha-meta-inline"><i data-lucide="battery"></i> Battery: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
+                                                        {% endif %}
+                                                        {% if entity.linkquality is not none and entity.linkquality != "" %}
+                                                            <span class="ha-meta-inline"><i data-lucide="wifi"></i> Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
+                                                        {% endif %}
+                                                        {% if entity.voltage is not none and entity.voltage != "" %}
+                                                            <span class="ha-meta-inline"><i data-lucide="activity"></i> Volt: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                                {% if not loop.last %}
+                                                    <div class="ha-compact-separator"></div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
+                                    <div class="ha-entities ha-detailed">
+                                        {% set entity = block.entity %}
                                         <div class="ha-entity-detailed">
                                             <div class="ha-card-header">
                                                 <span class="ha-title">
@@ -102,11 +103,14 @@
                                                 </div>
                                             {% endif %}
                                         </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if not loop.last %}
+                                    <div class="ha-block-separator" style="height: 24px;"></div>
+                                {% endif %}
+                            {% endfor %}
                         </div>
-                    {% endif %}
+                    </div>
                 {% endfor %}
             </div>
         {% endif %}

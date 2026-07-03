@@ -209,7 +209,6 @@ class HomeassistantModule:
                 url = self.config.get("url", "http://homeassistant.local:8123")
                 token = self.config.get("token")
                 entity_configs = self.config.get("entities", [])
-                groups_config = self.config.get("groups", [])
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
                 width = self.config.get("width", "100%")
@@ -232,8 +231,8 @@ class HomeassistantModule:
                     await asyncio.sleep(self.interval)
                     continue
                 
-                # Check for configured entities/groups
-                if not groups_config and not entity_configs:
+                # Check for configured entities
+                if not entity_configs:
                     html = self.render_template(
                         "widget.html",
                         error=self.translate("no_entities", "No entities configured"),
@@ -248,50 +247,65 @@ class HomeassistantModule:
                     await asyncio.sleep(self.interval)
                     continue
 
-                if not groups_config and entity_configs:
-                    # Fallback to single group using flat entities config
-                    groups_config = [{
-                        "name": "",
-                        "layout": self.config.get("layout", "detailed"),
-                        "entities": entity_configs
-                    }]
-
-                # Collect all unique entity configs
-                all_entity_configs = []
-                seen_entity_ids = set()
-                for group_cfg in groups_config:
-                    for ent_cfg in group_cfg.get("entities", []):
-                        ent_id = ent_cfg.get("entity_id")
-                        if ent_id and ent_id not in seen_entity_ids:
-                            seen_entity_ids.add(ent_id)
-                            all_entity_configs.append(ent_cfg)
-
                 # Fetch entity states
                 try:
-                    entities_map = {}
-                    if all_entity_configs:
-                        fetched_entities = await self.fetch_all_states(url, token, all_entity_configs)
-                        entities_map = {e["entity_id"]: e for e in fetched_entities}
+                    fetched_entities = []
+                    if entity_configs:
+                        fetched_entities = await self.fetch_all_states(url, token, entity_configs)
                     
-                    groups = []
-                    all_failed = len(entities_map) > 0 and all(e["error"] for e in entities_map.values())
+                    all_failed = len(fetched_entities) > 0 and all(e["error"] for e in fetched_entities)
                     
-                    for group_cfg in groups_config:
-                        group_entities = []
-                        for ent_cfg in group_cfg.get("entities", []):
-                            ent_id = ent_cfg.get("entity_id")
-                            if ent_id in entities_map:
-                                ent_data = copy.deepcopy(entities_map[ent_id])
-                                if ent_cfg.get("custom_name"):
-                                    ent_data["name"] = ent_cfg["custom_name"]
-                                if ent_cfg.get("custom_icon"):
-                                    ent_data["icon"] = ent_cfg["custom_icon"]
-                                group_entities.append(ent_data)
+                    # Group entities dynamically by group name, preserving order of first appearance
+                    groups_ordered = []
+                    groups_map = {}
+                    
+                    for ent in fetched_entities:
+                        cfg = next((c for c in entity_configs if c["entity_id"] == ent["entity_id"]), {})
+                        group_name = cfg.get("group", "").strip()
+                        layout = cfg.get("layout") or self.config.get("layout", "compact")
                         
+                        ent["layout"] = layout
+                        
+                        if group_name not in groups_map:
+                            group_obj = {
+                                "name": group_name,
+                                "entities": []
+                            }
+                            groups_map[group_name] = group_obj
+                            groups_ordered.append(group_obj)
+                            
+                        groups_map[group_name]["entities"].append(ent)
+                        
+                    # Build rendering blocks (consecutive compact items grouped together)
+                    groups = []
+                    for group_obj in groups_ordered:
+                        blocks = []
+                        current_compact_list = []
+                        
+                        for ent in group_obj["entities"]:
+                            if ent["layout"] == "detailed":
+                                if current_compact_list:
+                                    blocks.append({
+                                        "type": "compact",
+                                        "entities": current_compact_list
+                                    })
+                                    current_compact_list = []
+                                blocks.append({
+                                    "type": "detailed",
+                                    "entity": ent
+                                })
+                            else:
+                                current_compact_list.append(ent)
+                                
+                        if current_compact_list:
+                            blocks.append({
+                                "type": "compact",
+                                "entities": current_compact_list
+                            })
+                            
                         groups.append({
-                            "name": group_cfg.get("name", ""),
-                            "layout": group_cfg.get("layout", "compact"),
-                            "entities": group_entities
+                            "name": group_obj["name"],
+                            "blocks": blocks
                         })
 
                     html = self.render_template(

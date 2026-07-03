@@ -265,13 +265,11 @@ async def test_run_loop_with_groups(mock_urlopen):
     config = {
         "url": "http://localhost:8123",
         "token": "fake_token",
-        "groups": [
+        "entities": [
             {
-                "name": "Climate Group",
-                "layout": "detailed",
-                "entities": [
-                    {"entity_id": "sensor.living_room_temp"}
-                ]
+                "entity_id": "sensor.living_room_temp",
+                "group": "Climate Group",
+                "layout": "detailed"
             }
         ]
     }
@@ -291,9 +289,10 @@ async def test_run_loop_with_groups(mock_urlopen):
     assert len(kwargs["groups"]) == 1
     group = kwargs["groups"][0]
     assert group["name"] == "Climate Group"
-    assert group["layout"] == "detailed"
-    assert len(group["entities"]) == 1
-    entity = group["entities"][0]
+    assert len(group["blocks"]) == 1
+    block = group["blocks"][0]
+    assert block["type"] == "detailed"
+    entity = block["entity"]
     assert entity["entity_id"] == "sensor.living_room_temp"
     assert entity["state"] == "22.4 °C"
     assert entity["battery"] == 88
