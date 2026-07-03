@@ -38,6 +38,74 @@ def fetch_entity_state(base_url: str, token: str, entity_id: str) -> dict:
         logger.error(f"Error fetching state from Home Assistant for entity {entity_id}: {e}")
     return None
 
+def fetch_all_ha_states(base_url: str, token: str) -> list[dict]:
+    """Synchronous blocking fetch of all entity states from Home Assistant."""
+    url = f"{base_url.rstrip('/')}/api/states"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if response.status == 200:
+                return json.loads(response.read().decode("utf-8"))
+            else:
+                logger.error(f"Home Assistant returned status {response.status} for all states")
+    except Exception as e:
+        logger.error(f"Error fetching all states from Home Assistant: {e}")
+    return None
+
+def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: list[str], fallback_keys: list[str] = None) -> any:
+    """
+    Finds a companion sensor value (like battery, humidity) for a given entity.
+    """
+    parts = entity_id.split(".")
+    if len(parts) != 2:
+        return None
+    domain, name = parts
+    
+    # 1. Look in entity's own attributes first
+    entity_data = states_dict.get(entity_id)
+    if entity_data:
+        attrs = entity_data.get("attributes", {})
+        if fallback_keys:
+            val = find_attribute(attrs, fallback_keys)
+            if val is not None and val != "":
+                return val
+                
+    # 2. Try direct candidates (appending suffix to full entity name part)
+    # e.g., sensor.living_room_temp_battery
+    for suffix in attr_suffixes:
+        cand = f"sensor.{name}{suffix}"
+        if cand in states_dict:
+            val = states_dict[cand].get("state")
+            if val and val not in ("unknown", "unavailable"):
+                return val
+                
+    # 3. Strip common sensor suffixes from the base name, then append
+    suffixes_to_strip = [
+        "_temp", "_temperature", "_humidity", "_sensor", "_multisensor",
+        "_climate", "_motion", "_door", "_window", "_lock"
+    ]
+    base_name = name
+    for suf in suffixes_to_strip:
+        if base_name.endswith(suf):
+            base_name = base_name[:-len(suf)]
+            break
+            
+    if base_name != name:
+        for suffix in attr_suffixes:
+            cand = f"sensor.{base_name}{suffix}"
+            if cand in states_dict:
+                val = states_dict[cand].get("state")
+                if val and val not in ("unknown", "unavailable"):
+                    return val
+                    
+    return None
+
 def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dict, translate_func) -> tuple[str, str, bool]:
     """
     Resolves the icon, localized state string, and active status based on the entity domain,
@@ -144,12 +212,32 @@ class HomeassistantModule:
         return default if default is not None else key
 
     async def fetch_all_states(self, base_url, token, entity_configs):
-        async def fetch_one(entity_config):
+        # Try fetching all states at once to minimize HA requests and allow companion lookups
+        raw_states = await asyncio.to_thread(fetch_all_ha_states, base_url, token)
+        
+        # Build states dictionary mapping entity_id -> state data
+        states_dict = {}
+        if isinstance(raw_states, list):
+            for s in raw_states:
+                if isinstance(s, dict):
+                    eid = s.get("entity_id")
+                    if eid:
+                        states_dict[eid] = s
+                    
+        async def resolve_one(entity_config):
             entity_id = entity_config["entity_id"]
             custom_name = entity_config.get("custom_name")
             custom_icon = entity_config.get("custom_icon")
             
-            data = await asyncio.to_thread(fetch_entity_state, base_url, token, entity_id)
+            data = None
+            if entity_id in states_dict:
+                data = states_dict[entity_id]
+            else:
+                # Fall back to fetching individually if the full fetch failed or didn't contain it
+                data = await asyncio.to_thread(fetch_entity_state, base_url, token, entity_id)
+                if data:
+                    states_dict[entity_id] = data
+
             if not data:
                 return {
                     "entity_id": entity_id,
@@ -165,7 +253,7 @@ class HomeassistantModule:
                     "domain": entity_id.split(".")[0],
                     "device_class": None
                 }
-            
+                
             state = data.get("state", "N/A")
             attributes = data.get("attributes", {})
             friendly_name = custom_name or attributes.get("friendly_name", entity_id)
@@ -177,11 +265,11 @@ class HomeassistantModule:
             
             icon = custom_icon or smart_icon
             
-            # Extract common sensor attributes for nested metadata layouts
-            battery = find_attribute(attributes, ["battery", "battery_level", "battery_state"])
-            humidity = find_attribute(attributes, ["humidity", "relative_humidity"])
-            linkquality = find_attribute(attributes, ["linkquality", "signal_strength", "rssi"])
-            voltage = find_attribute(attributes, ["voltage"])
+            # Extract common attributes using standard attributes or companion sensors
+            battery = find_companion_attribute(entity_id, states_dict, ["_battery", "_battery_level", "_power"], ["battery", "battery_level", "battery_state"])
+            humidity = find_companion_attribute(entity_id, states_dict, ["_humidity", "_relative_humidity"], ["humidity", "relative_humidity"])
+            linkquality = find_companion_attribute(entity_id, states_dict, ["_linkquality", "_signal", "_signal_strength", "_rssi"], ["linkquality", "signal_strength", "rssi"])
+            voltage = find_companion_attribute(entity_id, states_dict, ["_voltage"], ["voltage"])
             
             return {
                 "entity_id": entity_id,
@@ -199,7 +287,7 @@ class HomeassistantModule:
                 "device_class": attributes.get("device_class")
             }
 
-        tasks = [fetch_one(cfg) for cfg in entity_configs]
+        tasks = [resolve_one(cfg) for cfg in entity_configs]
         return await asyncio.gather(*tasks)
 
     async def run_loop(self, broadcast_func):
