@@ -62,6 +62,52 @@
       "title": "Layout Style",
       "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata)."
     },
+    "groups": {
+      "type": "array",
+      "title": "Entity Groups",
+      "description": "Optional layout groups to mix and match layouts and group sensors.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Group Title",
+            "description": "Optional header to show above this group."
+          },
+          "layout": {
+            "type": "string",
+            "default": "compact",
+            "enum": ["detailed", "compact"],
+            "title": "Group Layout Style"
+          },
+          "entities": {
+            "type": "array",
+            "title": "Entities",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entity_id": {
+                  "type": "string",
+                  "title": "Entity ID",
+                  "description": "The Home Assistant entity ID."
+                },
+                "custom_name": {
+                  "type": "string",
+                  "title": "Custom Name"
+                },
+                "custom_icon": {
+                  "type": "string",
+                  "title": "Custom Icon"
+                }
+              },
+              "required": ["entity_id"]
+            }
+          }
+        },
+        "required": ["entities"]
+      }
+    },
     "entities": {
       "type": "array",
       "title": "Tracked Entities",

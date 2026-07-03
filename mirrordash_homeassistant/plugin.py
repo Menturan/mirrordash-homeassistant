@@ -2,9 +2,21 @@ import asyncio
 import logging
 import urllib.request
 import json
+import copy
 from datetime import datetime
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
+
+def find_attribute(attributes: dict, keys: list[str]) -> any:
+    """Finds an attribute value case-insensitively from a list of possible keys."""
+    if not attributes:
+        return None
+    norm_attrs = {k.lower().replace(" ", "_").replace("-", "_"): v for k, v in attributes.items()}
+    for key in keys:
+        norm_key = key.lower().replace(" ", "_").replace("-", "_")
+        if norm_key in norm_attrs:
+            return norm_attrs[norm_key]
+    return None
 
 def fetch_entity_state(base_url: str, token: str, entity_id: str) -> dict:
     """Synchronous blocking fetch of a single entity state."""
@@ -166,10 +178,10 @@ class HomeassistantModule:
             icon = custom_icon or smart_icon
             
             # Extract common sensor attributes for nested metadata layouts
-            battery = attributes.get("battery") or attributes.get("battery_level")
-            humidity = attributes.get("humidity")
-            linkquality = attributes.get("linkquality") or attributes.get("signal_strength")
-            voltage = attributes.get("voltage")
+            battery = find_attribute(attributes, ["battery", "battery_level", "battery_state"])
+            humidity = find_attribute(attributes, ["humidity", "relative_humidity"])
+            linkquality = find_attribute(attributes, ["linkquality", "signal_strength", "rssi"])
+            voltage = find_attribute(attributes, ["voltage"])
             
             return {
                 "entity_id": entity_id,
@@ -197,62 +209,98 @@ class HomeassistantModule:
                 url = self.config.get("url", "http://homeassistant.local:8123")
                 token = self.config.get("token")
                 entity_configs = self.config.get("entities", [])
+                groups_config = self.config.get("groups", [])
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
-                layout = self.config.get("layout", "detailed")
                 
                 # Check for token
                 if not token:
                     html = self.render_template(
                         "widget.html",
                         error=self.translate("no_token", "API Token is missing"),
-                        entities=[],
+                        groups=[],
                         heading=heading,
-                        show_header=show_header,
-                        layout=layout
+                        show_header=show_header
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
                     continue
                 
-                # Check for configured entities
-                if not entity_configs:
+                # Check for configured entities/groups
+                if not groups_config and not entity_configs:
                     html = self.render_template(
                         "widget.html",
                         error=self.translate("no_entities", "No entities configured"),
-                        entities=[],
+                        groups=[],
                         heading=heading,
-                        show_header=show_header,
-                        layout=layout
+                        show_header=show_header
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
                     continue
 
+                if not groups_config and entity_configs:
+                    # Fallback to single group using flat entities config
+                    groups_config = [{
+                        "name": "",
+                        "layout": self.config.get("layout", "detailed"),
+                        "entities": entity_configs
+                    }]
+
+                # Collect all unique entity configs
+                all_entity_configs = []
+                seen_entity_ids = set()
+                for group_cfg in groups_config:
+                    for ent_cfg in group_cfg.get("entities", []):
+                        ent_id = ent_cfg.get("entity_id")
+                        if ent_id and ent_id not in seen_entity_ids:
+                            seen_entity_ids.add(ent_id)
+                            all_entity_configs.append(ent_cfg)
+
                 # Fetch entity states
                 try:
-                    entities = await self.fetch_all_states(url, token, entity_configs)
-                    # Check if all entities returned not found (likely connection/auth issue if all failed)
-                    all_failed = len(entities) > 0 and all(e["error"] for e in entities)
+                    entities_map = {}
+                    if all_entity_configs:
+                        fetched_entities = await self.fetch_all_states(url, token, all_entity_configs)
+                        entities_map = {e["entity_id"]: e for e in fetched_entities}
                     
+                    groups = []
+                    all_failed = len(entities_map) > 0 and all(e["error"] for e in entities_map.values())
+                    
+                    for group_cfg in groups_config:
+                        group_entities = []
+                        for ent_cfg in group_cfg.get("entities", []):
+                            ent_id = ent_cfg.get("entity_id")
+                            if ent_id in entities_map:
+                                ent_data = copy.deepcopy(entities_map[ent_id])
+                                if ent_cfg.get("custom_name"):
+                                    ent_data["name"] = ent_cfg["custom_name"]
+                                if ent_cfg.get("custom_icon"):
+                                    ent_data["icon"] = ent_cfg["custom_icon"]
+                                group_entities.append(ent_data)
+                        
+                        groups.append({
+                            "name": group_cfg.get("name", ""),
+                            "layout": group_cfg.get("layout", "compact"),
+                            "entities": group_entities
+                        })
+
                     html = self.render_template(
                         "widget.html",
-                        entities=entities,
+                        groups=groups,
                         error=self.translate("connection_error", "Connection error") if all_failed else None,
                         last_checked=datetime.now().strftime("%H:%M"),
                         heading=heading,
-                        show_header=show_header,
-                        layout=layout
+                        show_header=show_header
                     )
                 except Exception as fetch_err:
                     logger.error(f"Error fetching states: {fetch_err}")
                     html = self.render_template(
                         "widget.html",
-                        entities=[],
+                        groups=[],
                         error=self.translate("unreachable", "Could not connect to Home Assistant"),
                         heading=heading,
-                        show_header=show_header,
-                        layout=layout
+                        show_header=show_header
                     )
                 
                 await broadcast_func(self.name, html)

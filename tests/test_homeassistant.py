@@ -175,10 +175,9 @@ async def test_run_loop_missing_token():
     module.render_template.assert_called_with(
         "widget.html",
         error="API Token is missing",
-        entities=[],
+        groups=[],
         heading="",
-        show_header=True,
-        layout="detailed"
+        show_header=True
     )
 
 @pytest.mark.asyncio
@@ -205,10 +204,9 @@ async def test_run_loop_missing_entities():
     module.render_template.assert_called_with(
         "widget.html",
         error="No entities configured",
-        entities=[],
+        groups=[],
         heading="",
-        show_header=True,
-        layout="detailed"
+        show_header=True
     )
 
 @pytest.mark.asyncio
@@ -233,8 +231,61 @@ async def test_run_loop_custom_heading():
     module.render_template.assert_called_with(
         "widget.html",
         error="No entities configured",
-        entities=[],
+        groups=[],
         heading="My Custom Devices",
-        show_header=True,
-        layout="detailed"
+        show_header=True
     )
+
+@pytest.mark.asyncio
+@patch("urllib.request.urlopen")
+async def test_run_loop_with_groups(mock_urlopen):
+    # Mock HA response
+    mock_response = MagicMock()
+    mock_response.status = 200
+    mock_response.read.return_value = json.dumps({
+        "entity_id": "sensor.living_room_temp",
+        "state": "22.4",
+        "attributes": {
+            "friendly_name": "Living Room Temp",
+            "unit_of_measurement": "°C",
+            "battery": 88
+        }
+    }).encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    config = {
+        "url": "http://localhost:8123",
+        "token": "fake_token",
+        "groups": [
+            {
+                "name": "Climate Group",
+                "layout": "detailed",
+                "entities": [
+                    {"entity_id": "sensor.living_room_temp"}
+                ]
+            }
+        ]
+    }
+    module = HomeassistantModule(config)
+    module.render_template = MagicMock(return_value="<div>Groups OK</div>")
+    
+    broadcast_func = AsyncMock()
+    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
+        try:
+            await module.run_loop(broadcast_func)
+        except asyncio.CancelledError:
+            pass
+            
+    module.render_template.assert_called_once()
+    args, kwargs = module.render_template.call_args
+    assert kwargs["error"] is None
+    assert len(kwargs["groups"]) == 1
+    group = kwargs["groups"][0]
+    assert group["name"] == "Climate Group"
+    assert group["layout"] == "detailed"
+    assert len(group["entities"]) == 1
+    entity = group["entities"][0]
+    assert entity["entity_id"] == "sensor.living_room_temp"
+    assert entity["state"] == "22.4 °C"
+    assert entity["battery"] == 88
+

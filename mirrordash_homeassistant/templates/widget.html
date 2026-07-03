@@ -1,5 +1,5 @@
 <div class="ha-container">
-    {% if show_header and (not error or entities) %}
+    {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}
     
@@ -11,94 +11,105 @@
             </div>
         {% endif %}
         
-        {% if entities %}
-            {% if layout == "compact" %}
-                <!-- Layout Option A.3: Compact Vertical List -->
-                <div class="ha-entities ha-compact-list">
-                    {% for entity in entities %}
-                        <div class="ha-compact-item">
-                            <div class="ha-compact-row">
-                                <span class="ha-compact-label">
-                                    {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch' or entity.device_class == 'motion' or entity.device_class == 'door') %}
-                                        <span class="ha-status-pip active"></span>
-                                    {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' or entity.device_class == 'motion' or entity.device_class == 'door' %}
-                                        <span class="ha-status-pip"></span>
-                                    {% else %}
-                                        <i data-lucide="{{ entity.icon }}"></i>
-                                    {% endif %}
-                                    {{ entity.name }}
-                                </span>
-                                <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
-                            </div>
-                            {% if entity.battery is not none or entity.humidity is not none or entity.linkquality is not none or entity.voltage is not none %}
-                                <div class="ha-compact-metadata">
-                                    {% if entity.humidity is not none %}
-                                        <span class="ha-meta-inline"><i data-lucide="droplet"></i> Hum: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
-                                    {% endif %}
-                                    {% if entity.battery is not none %}
-                                        <span class="ha-meta-inline"><i data-lucide="battery"></i> Battery: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
-                                    {% endif %}
-                                    {% if entity.linkquality is not none %}
-                                        <span class="ha-meta-inline"><i data-lucide="wifi"></i> Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
-                                    {% endif %}
-                                    {% if entity.voltage is not none %}
-                                        <span class="ha-meta-inline"><i data-lucide="activity"></i> Volt: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
-                                    {% endif %}
+        {% if groups %}
+            <div class="ha-groups">
+                {% for group in groups %}
+                    {% if group.entities %}
+                        <div class="ha-group">
+                            {% if group.name %}
+                                <div class="ha-group-title">{{ group.name }}</div>
+                            {% endif %}
+                            
+                            {% if group.layout == "compact" %}
+                                <!-- Layout Option A.3: Compact Vertical List -->
+                                <div class="ha-entities ha-compact-list">
+                                    {% for entity in group.entities %}
+                                        <div class="ha-compact-item">
+                                            <div class="ha-compact-row">
+                                                <span class="ha-compact-label">
+                                                    {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch') %}
+                                                        <span class="ha-status-pip active"></span>
+                                                    {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' %}
+                                                        <span class="ha-status-pip"></span>
+                                                    {% endif %}
+                                                    <i data-lucide="{{ entity.icon }}" class="{% if entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}"></i>
+                                                    {{ entity.name }}
+                                                </span>
+                                                <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
+                                            </div>
+                                            {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
+                                                <div class="ha-compact-metadata">
+                                                    {% if entity.humidity is not none and entity.humidity != "" %}
+                                                        <span class="ha-meta-inline"><i data-lucide="droplet"></i> Hum: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
+                                                    {% endif %}
+                                                    {% if entity.battery is not none and entity.battery != "" %}
+                                                        <span class="ha-meta-inline"><i data-lucide="battery"></i> Battery: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
+                                                    {% endif %}
+                                                    {% if entity.linkquality is not none and entity.linkquality != "" %}
+                                                        <span class="ha-meta-inline"><i data-lucide="wifi"></i> Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
+                                                    {% endif %}
+                                                    {% if entity.voltage is not none and entity.voltage != "" %}
+                                                        <span class="ha-meta-inline"><i data-lucide="activity"></i> Volt: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                            {% if not loop.last %}
+                                                <div class="ha-compact-separator"></div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
+                                <div class="ha-entities ha-detailed">
+                                    {% for entity in group.entities %}
+                                        <div class="ha-entity-detailed">
+                                            <div class="ha-card-header">
+                                                <span class="ha-title">
+                                                    <i data-lucide="{{ entity.icon }}"></i>
+                                                    {{ entity.name }}
+                                                </span>
+                                                <span class="ha-class">{{ entity.domain }}{% if entity.device_class %} ({{ entity.device_class }}){% endif %}</span>
+                                            </div>
+                                            <div class="ha-reading-row">
+                                                <span class="ha-primary-val {% if entity.error %}ha-text-error{% endif %}">{{ entity.state }}</span>
+                                            </div>
+                                            {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
+                                                <div class="ha-metadata-row">
+                                                    {% if entity.humidity is not none and entity.humidity != "" %}
+                                                        <div class="ha-meta-pill">
+                                                            <i data-lucide="droplet"></i>
+                                                            Humidity: <span class="ha-meta-value">{{ entity.humidity }}%</span>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if entity.battery is not none and entity.battery != "" %}
+                                                        <div class="ha-meta-pill">
+                                                            <i data-lucide="battery"></i>
+                                                            Battery: <span class="ha-meta-value">{{ entity.battery }}%</span>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if entity.linkquality is not none and entity.linkquality != "" %}
+                                                        <div class="ha-meta-pill">
+                                                            <i data-lucide="wifi"></i>
+                                                            Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span>
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if entity.voltage is not none and entity.voltage != "" %}
+                                                        <div class="ha-meta-pill">
+                                                            <i data-lucide="activity"></i>
+                                                            Voltage: <span class="ha-meta-value">{{ entity.voltage }}V</span>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
                                 </div>
                             {% endif %}
-                            {% if not loop.last %}
-                                <div class="ha-compact-separator"></div>
-                            {% endif %}
                         </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
-                <div class="ha-entities ha-detailed">
-                    {% for entity in entities %}
-                        <div class="ha-entity-detailed">
-                            <div class="ha-card-header">
-                                <span class="ha-title">
-                                    <i data-lucide="{{ entity.icon }}"></i>
-                                    {{ entity.name }}
-                                </span>
-                                <span class="ha-class">{{ entity.domain }}{% if entity.device_class %} ({{ entity.device_class }}){% endif %}</span>
-                            </div>
-                            <div class="ha-reading-row">
-                                <span class="ha-primary-val {% if entity.error %}ha-text-error{% endif %}">{{ entity.state }}</span>
-                            </div>
-                            {% if entity.battery is not none or entity.humidity is not none or entity.linkquality is not none or entity.voltage is not none %}
-                                <div class="ha-metadata-row">
-                                    {% if entity.humidity is not none %}
-                                        <div class="ha-meta-pill">
-                                            <i data-lucide="droplet"></i>
-                                            Humidity: <span class="ha-meta-value">{{ entity.humidity }}%</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if entity.battery is not none %}
-                                        <div class="ha-meta-pill">
-                                            <i data-lucide="battery"></i>
-                                            Battery: <span class="ha-meta-value">{{ entity.battery }}%</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if entity.linkquality is not none %}
-                                        <div class="ha-meta-pill">
-                                            <i data-lucide="wifi"></i>
-                                            Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if entity.voltage is not none %}
-                                        <div class="ha-meta-pill">
-                                            <i data-lucide="activity"></i>
-                                            Voltage: <span class="ha-meta-value">{{ entity.voltage }}V</span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
         {% endif %}
     </div>
 </div>
@@ -138,6 +149,29 @@
 .ha-body {
     width: 100%;
     margin-top: 8px;
+}
+
+.ha-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.ha-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.ha-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-standard-gray, #999999);
+    border-bottom: 1px dashed var(--color-dimmed-charcoal, #666666);
+    padding-bottom: 4px;
+    margin-bottom: 16px;
 }
 
 /* ============================================================
