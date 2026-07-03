@@ -12,21 +12,93 @@
         {% endif %}
         
         {% if entities %}
-            <div class="ha-entities">
-                {% for entity in entities %}
-                    <div class="ha-entity">
-                        <div class="ha-entity-left">
-                            <span class="ha-entity-icon {% if entity.is_active %}ha-icon-active{% else %}ha-icon-inactive{% endif %}">
-                                <i data-lucide="{{ entity.icon }}"></i>
-                            </span>
-                            <span class="ha-entity-name" title="{{ entity.name }}">{{ entity.name }}</span>
+            {% if layout == "compact" %}
+                <!-- Layout Option A.3: Compact Vertical List -->
+                <div class="ha-entities ha-compact-list">
+                    {% for entity in entities %}
+                        <div class="ha-compact-item">
+                            <div class="ha-compact-row">
+                                <span class="ha-compact-label">
+                                    {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch' or entity.device_class == 'motion' or entity.device_class == 'door') %}
+                                        <span class="ha-status-pip active"></span>
+                                    {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' or entity.device_class == 'motion' or entity.device_class == 'door' %}
+                                        <span class="ha-status-pip"></span>
+                                    {% else %}
+                                        <i data-lucide="{{ entity.icon }}"></i>
+                                    {% endif %}
+                                    {{ entity.name }}
+                                </span>
+                                <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
+                            </div>
+                            {% if entity.battery is not none or entity.humidity is not none or entity.linkquality is not none or entity.voltage is not none %}
+                                <div class="ha-compact-metadata">
+                                    {% if entity.humidity is not none %}
+                                        <span class="ha-meta-inline"><i data-lucide="droplet"></i> Hum: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
+                                    {% endif %}
+                                    {% if entity.battery is not none %}
+                                        <span class="ha-meta-inline"><i data-lucide="battery"></i> Battery: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
+                                    {% endif %}
+                                    {% if entity.linkquality is not none %}
+                                        <span class="ha-meta-inline"><i data-lucide="wifi"></i> Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
+                                    {% endif %}
+                                    {% if entity.voltage is not none %}
+                                        <span class="ha-meta-inline"><i data-lucide="activity"></i> Volt: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            {% if not loop.last %}
+                                <div class="ha-compact-separator"></div>
+                            {% endif %}
                         </div>
-                        <div class="ha-entity-state {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">
-                            {{ entity.state }}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
+                <div class="ha-entities ha-detailed">
+                    {% for entity in entities %}
+                        <div class="ha-entity-detailed">
+                            <div class="ha-card-header">
+                                <span class="ha-title">
+                                    <i data-lucide="{{ entity.icon }}"></i>
+                                    {{ entity.name }}
+                                </span>
+                                <span class="ha-class">{{ entity.domain }}{% if entity.device_class %} ({{ entity.device_class }}){% endif %}</span>
+                            </div>
+                            <div class="ha-reading-row">
+                                <span class="ha-primary-val {% if entity.error %}ha-text-error{% endif %}">{{ entity.state }}</span>
+                            </div>
+                            {% if entity.battery is not none or entity.humidity is not none or entity.linkquality is not none or entity.voltage is not none %}
+                                <div class="ha-metadata-row">
+                                    {% if entity.humidity is not none %}
+                                        <div class="ha-meta-pill">
+                                            <i data-lucide="droplet"></i>
+                                            Humidity: <span class="ha-meta-value">{{ entity.humidity }}%</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if entity.battery is not none %}
+                                        <div class="ha-meta-pill">
+                                            <i data-lucide="battery"></i>
+                                            Battery: <span class="ha-meta-value">{{ entity.battery }}%</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if entity.linkquality is not none %}
+                                        <div class="ha-meta-pill">
+                                            <i data-lucide="wifi"></i>
+                                            Signal: <span class="ha-meta-value">{{ entity.linkquality }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if entity.voltage is not none %}
+                                        <div class="ha-meta-pill">
+                                            <i data-lucide="activity"></i>
+                                            Voltage: <span class="ha-meta-value">{{ entity.voltage }}V</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -36,12 +108,12 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 320px;
+    max-width: 380px;
     color: var(--color-standard-gray, #999999);
     font-family: var(--mirror-font-family, sans-serif);
 }
 
-/* Align module header and items based on position */
+/* Alignment Snapping based on anchor position */
 #top_right .ha-container,
 #middle_right .ha-container,
 #bottom_right .ha-container {
@@ -49,11 +121,18 @@
     text-align: right;
 }
 
-#top_left .ha-container,
-#middle_left .ha-container,
-#bottom_left .ha-container {
-    align-items: flex-start;
-    text-align: left;
+#top_right .ha-compact-row,
+#middle_right .ha-compact-row,
+#bottom_right .ha-compact-row {
+    flex-direction: row-reverse;
+}
+
+#top_right .ha-compact-metadata,
+#middle_right .ha-compact-metadata,
+#bottom_right .ha-compact-metadata {
+    flex-direction: row-reverse;
+    padding-right: 24px;
+    padding-left: 0;
 }
 
 .ha-body {
@@ -61,76 +140,166 @@
     margin-top: 8px;
 }
 
-.ha-entities {
+/* ============================================================
+   Detailed Layout A.1 Styling
+   ============================================================ */
+.ha-detailed {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 32px;
 }
 
-.ha-entity {
+.ha-entity-detailed {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: haFadeIn 0.5s ease-out;
+}
+
+.ha-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ha-title {
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-standard-gray, #999999);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ha-class {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-reading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.ha-primary-val {
+    font-size: 36px;
+    font-weight: 100;
+    color: var(--color-high-contrast, #ffffff);
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+}
+
+.ha-metadata-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-top: 1px solid var(--color-dimmed-charcoal, #666666);
+    padding-top: 10px;
+    margin-top: 4px;
+}
+
+.ha-meta-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-standard-gray, #999999);
+}
+
+.ha-meta-pill i {
+    width: 12px;
+    height: 12px;
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-meta-value {
+    color: var(--color-high-contrast, #ffffff);
+}
+
+/* ============================================================
+   Compact Layout A.3 Styling
+   ============================================================ */
+.ha-compact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ha-compact-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: haFadeIn 0.5s ease-out;
+}
+
+.ha-compact-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 16px;
+}
+
+.ha-compact-label {
     font-size: 14px;
-    animation: haFadeIn 0.5s ease-out;
-}
-
-/* Dynamic layout snapping adjustment */
-#top_right .ha-entity,
-#middle_right .ha-entity,
-#bottom_right .ha-entity {
-    flex-direction: row-reverse;
-}
-
-.ha-entity-left {
+    font-weight: 500;
+    color: var(--color-high-contrast, #ffffff);
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
-    overflow: hidden;
 }
 
-#top_right .ha-entity-left,
-#middle_right .ha-entity-left,
-#bottom_right .ha-entity-left {
-    flex-direction: row-reverse;
-}
-
-.ha-entity-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.ha-entity-icon i {
-    width: 16px;
-    height: 16px;
-    stroke-width: 1.5px;
-}
-
-.ha-icon-active i {
+.ha-compact-value {
+    font-size: 15px;
+    font-weight: 600;
     color: var(--color-high-contrast, #ffffff);
 }
 
-.ha-icon-inactive i {
+.ha-compact-metadata {
+    display: flex;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--color-standard-gray, #999999);
+    padding-left: 24px;
+}
+
+.ha-meta-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ha-meta-inline i {
+    width: 10px;
+    height: 10px;
     color: var(--color-dimmed-charcoal, #666666);
 }
 
-.ha-entity-name {
-    font-weight: 400;
-    color: var(--color-standard-gray, #999999);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.ha-compact-separator {
+    height: 1px;
+    background-color: var(--color-dimmed-charcoal, #666666);
+    opacity: 0.5;
+    margin-top: 12px;
 }
 
-.ha-entity-state {
-    font-weight: 500;
-    white-space: nowrap;
-    flex-shrink: 0;
+/* Common Styles */
+.ha-status-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    background-color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-status-pip.active {
+    background-color: var(--color-accent-active, #a0ffba);
+}
+
+.ha-status-pip.alert {
+    background-color: var(--color-accent-warm, #fecdd3);
 }
 
 .ha-text-active {

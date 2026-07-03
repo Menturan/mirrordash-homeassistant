@@ -55,6 +55,13 @@
       "title": "Show Header",
       "description": "Show or hide the module's header/title."
     },
+    "layout": {
+      "type": "string",
+      "default": "detailed",
+      "enum": ["detailed", "compact"],
+      "title": "Layout Style",
+      "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata)."
+    },
     "entities": {
       "type": "array",
       "title": "Tracked Entities",

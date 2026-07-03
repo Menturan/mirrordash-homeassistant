@@ -145,7 +145,13 @@ class HomeassistantModule:
                     "state": self.translate("entity_not_found", "Not found"),
                     "icon": custom_icon or "alert-circle",
                     "is_active": False,
-                    "error": True
+                    "error": True,
+                    "battery": None,
+                    "humidity": None,
+                    "linkquality": None,
+                    "voltage": None,
+                    "domain": entity_id.split(".")[0],
+                    "device_class": None
                 }
             
             state = data.get("state", "N/A")
@@ -159,6 +165,12 @@ class HomeassistantModule:
             
             icon = custom_icon or smart_icon
             
+            # Extract common sensor attributes for nested metadata layouts
+            battery = attributes.get("battery") or attributes.get("battery_level")
+            humidity = attributes.get("humidity")
+            linkquality = attributes.get("linkquality") or attributes.get("signal_strength")
+            voltage = attributes.get("voltage")
+            
             return {
                 "entity_id": entity_id,
                 "name": friendly_name,
@@ -166,7 +178,13 @@ class HomeassistantModule:
                 "raw_state": state,
                 "icon": icon,
                 "is_active": is_active,
-                "error": False
+                "error": False,
+                "battery": battery,
+                "humidity": humidity,
+                "linkquality": linkquality,
+                "voltage": voltage,
+                "domain": entity_id.split(".")[0],
+                "device_class": attributes.get("device_class")
             }
 
         tasks = [fetch_one(cfg) for cfg in entity_configs]
@@ -181,6 +199,7 @@ class HomeassistantModule:
                 entity_configs = self.config.get("entities", [])
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
+                layout = self.config.get("layout", "detailed")
                 
                 # Check for token
                 if not token:
@@ -189,7 +208,8 @@ class HomeassistantModule:
                         error=self.translate("no_token", "API Token is missing"),
                         entities=[],
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        layout=layout
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -202,7 +222,8 @@ class HomeassistantModule:
                         error=self.translate("no_entities", "No entities configured"),
                         entities=[],
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        layout=layout
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -220,7 +241,8 @@ class HomeassistantModule:
                         error=self.translate("connection_error", "Connection error") if all_failed else None,
                         last_checked=datetime.now().strftime("%H:%M"),
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        layout=layout
                     )
                 except Exception as fetch_err:
                     logger.error(f"Error fetching states: {fetch_err}")
@@ -229,7 +251,8 @@ class HomeassistantModule:
                         entities=[],
                         error=self.translate("unreachable", "Could not connect to Home Assistant"),
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        layout=layout
                     )
                 
                 await broadcast_func(self.name, html)

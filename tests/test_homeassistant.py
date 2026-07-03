@@ -177,7 +177,8 @@ async def test_run_loop_missing_token():
         error="API Token is missing",
         entities=[],
         heading="",
-        show_header=True
+        show_header=True,
+        layout="detailed"
     )
 
 @pytest.mark.asyncio
@@ -206,7 +207,8 @@ async def test_run_loop_missing_entities():
         error="No entities configured",
         entities=[],
         heading="",
-        show_header=True
+        show_header=True,
+        layout="detailed"
     )
 
 @pytest.mark.asyncio
@@ -233,5 +235,6 @@ async def test_run_loop_custom_heading():
         error="No entities configured",
         entities=[],
         heading="My Custom Devices",
-        show_header=True
+        show_header=True,
+        layout="detailed"
     )
