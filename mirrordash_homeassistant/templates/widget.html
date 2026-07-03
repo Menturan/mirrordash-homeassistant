@@ -1,4 +1,4 @@
-<div class="ha-container">
+<div class="ha-container" style="width: {{ width }}; max-width: {{ max_width }}; height: {{ height }};">
     {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}

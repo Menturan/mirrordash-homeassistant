@@ -212,6 +212,9 @@ class HomeassistantModule:
                 groups_config = self.config.get("groups", [])
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
+                width = self.config.get("width", "100%")
+                max_width = self.config.get("max_width", "380px")
+                height = self.config.get("height", "auto")
                 
                 # Check for token
                 if not token:
@@ -220,7 +223,10 @@ class HomeassistantModule:
                         error=self.translate("no_token", "API Token is missing"),
                         groups=[],
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        width=width,
+                        max_width=max_width,
+                        height=height
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -233,7 +239,10 @@ class HomeassistantModule:
                         error=self.translate("no_entities", "No entities configured"),
                         groups=[],
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        width=width,
+                        max_width=max_width,
+                        height=height
                     )
                     await broadcast_func(self.name, html)
                     await asyncio.sleep(self.interval)
@@ -291,7 +300,10 @@ class HomeassistantModule:
                         error=self.translate("connection_error", "Connection error") if all_failed else None,
                         last_checked=datetime.now().strftime("%H:%M"),
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        width=width,
+                        max_width=max_width,
+                        height=height
                     )
                 except Exception as fetch_err:
                     logger.error(f"Error fetching states: {fetch_err}")
@@ -300,7 +312,10 @@ class HomeassistantModule:
                         groups=[],
                         error=self.translate("unreachable", "Could not connect to Home Assistant"),
                         heading=heading,
-                        show_header=show_header
+                        show_header=show_header,
+                        width=width,
+                        max_width=max_width,
+                        height=height
                     )
                 
                 await broadcast_func(self.name, html)

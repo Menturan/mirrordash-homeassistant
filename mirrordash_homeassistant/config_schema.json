@@ -55,6 +55,24 @@
       "title": "Show Header",
       "description": "Show or hide the module's header/title."
     },
+    "width": {
+      "type": "string",
+      "default": "100%",
+      "title": "Width",
+      "description": "CSS width of the module container (e.g., 380px, 100%, 30rem)."
+    },
+    "max_width": {
+      "type": "string",
+      "default": "380px",
+      "title": "Maximum Width",
+      "description": "CSS max-width of the module container (e.g., 380px, 100%, none)."
+    },
+    "height": {
+      "type": "string",
+      "default": "auto",
+      "title": "Height",
+      "description": "CSS height of the module container (e.g., auto, 300px, 100%)."
+    },
     "layout": {
       "type": "string",
       "default": "detailed",
