@@ -69,7 +69,6 @@
                                                     <i data-lucide="{{ entity.icon }}"></i>
                                                     {{ entity.name }}
                                                 </span>
-                                                <span class="ha-class">{{ entity.domain }}{% if entity.device_class %} ({{ entity.device_class }}){% endif %}</span>
                                             </div>
                                             <div class="ha-reading-row">
                                                 <span class="ha-primary-val {% if entity.error %}ha-text-error{% endif %}">{{ entity.state }}</span>
@@ -205,12 +204,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.ha-class {
-    font-family: var(--font-mono, monospace);
-    font-size: 9px;
-    color: var(--color-dimmed-charcoal, #666666);
 }
 
 .ha-reading-row {
