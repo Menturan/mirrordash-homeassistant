@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Home Assistant Settings",
+  "title": "Home Assistant",
+  "description": "Shows the state of lights, sensors and other devices from your Home Assistant.",
   "type": "object",
   "properties": {
     "enabled": {

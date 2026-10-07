@@ -1,6 +1,6 @@
 [project]
 name = "mirrordash-homeassistant"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fetches and displays states from a local Home Assistant system."
 authors = [
     { name = "MirrorDash Developer" }
