@@ -1,8 +1,5 @@
 import asyncio
 import logging
-import urllib.request
-import json
-import copy
 from datetime import datetime
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
@@ -16,46 +13,6 @@ def find_attribute(attributes: dict, keys: list[str]) -> any:
         norm_key = key.lower().replace(" ", "_").replace("-", "_")
         if norm_key in norm_attrs:
             return norm_attrs[norm_key]
-    return None
-
-def fetch_entity_state(base_url: str, token: str, entity_id: str) -> dict:
-    """Synchronous blocking fetch of a single entity state."""
-    url = f"{base_url.rstrip('/')}/api/states/{entity_id}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as response:
-            if response.status == 200:
-                return json.loads(response.read().decode("utf-8"))
-            else:
-                logger.error(f"Home Assistant returned status {response.status} for entity {entity_id}")
-    except Exception as e:
-        logger.error(f"Error fetching state from Home Assistant for entity {entity_id}: {e}")
-    return None
-
-def fetch_all_ha_states(base_url: str, token: str) -> list[dict]:
-    """Synchronous blocking fetch of all entity states from Home Assistant."""
-    url = f"{base_url.rstrip('/')}/api/states"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as response:
-            if response.status == 200:
-                return json.loads(response.read().decode("utf-8"))
-            else:
-                logger.error(f"Home Assistant returned status {response.status} for all states")
-    except Exception as e:
-        logger.error(f"Error fetching all states from Home Assistant: {e}")
     return None
 
 def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: list[str], fallback_keys: list[str] = None) -> any:
@@ -195,12 +152,9 @@ class HomeassistantModule:
         self.config = config
         self.name = "mirrordash_homeassistant"
         self.interval = config.get("interval", 30)
-        
-        self.data_dir = config.get("data_dir")
-        self.cache_dir = config.get("cache_dir")
         self.translations = config.get("translations", {})
-        self.event_bus = config.get("event_bus")
-        
+        self.last_error = None  # fetch_json's error from the last update, e.g. "rejected"
+
         logger.info(f"Initializing {self.name} module")
 
     def translate(self, key: str, default: str = None) -> str:
@@ -211,9 +165,21 @@ class HomeassistantModule:
             return val
         return default if default is not None else key
 
+    async def fetch_states(self, path: str, token: str):
+        """One Home Assistant API call; (answer, error). A saved earlier answer is not used: a home's
+        state from an hour ago would look current, so on a failure the answer is None."""
+        data, error = await self.fetch_json(path, headers={"Authorization": f"Bearer {token}"}, timeout=5)
+        if error:
+            logger.debug(f"Home Assistant {path}: {error}")
+            self.last_error = error
+            return None
+        return data
+
     async def fetch_all_states(self, base_url, token, entity_configs):
         # Try fetching all states at once to minimize HA requests and allow companion lookups
-        raw_states = await asyncio.to_thread(fetch_all_ha_states, base_url, token)
+        base_url = base_url.rstrip("/")
+        self.last_error = None
+        raw_states = await self.fetch_states(f"{base_url}/api/states", token)
         
         # Build states dictionary mapping entity_id -> state data
         states_dict = {}
@@ -234,7 +200,7 @@ class HomeassistantModule:
                 data = states_dict[entity_id]
             else:
                 # Fall back to fetching individually if the full fetch failed or didn't contain it
-                data = await asyncio.to_thread(fetch_entity_state, base_url, token, entity_id)
+                data = await self.fetch_states(f"{base_url}/api/states/{entity_id}", token)
                 if data:
                     states_dict[entity_id] = data
 
@@ -300,7 +266,6 @@ class HomeassistantModule:
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
                 width = self.config.get("width", "100%")
-                max_width = self.config.get("max_width", "380px")
                 height = self.config.get("height", "auto")
                 
                 # Check for token
@@ -312,7 +277,6 @@ class HomeassistantModule:
                         heading=heading,
                         show_header=show_header,
                         width=width,
-                        max_width=max_width,
                         height=height
                     )
                     await broadcast_func(self.name, html)
@@ -328,7 +292,6 @@ class HomeassistantModule:
                         heading=heading,
                         show_header=show_header,
                         width=width,
-                        max_width=max_width,
                         height=height
                     )
                     await broadcast_func(self.name, html)
@@ -399,12 +362,13 @@ class HomeassistantModule:
                     html = self.render_template(
                         "widget.html",
                         groups=groups,
-                        error=self.translate("connection_error", "Connection error") if all_failed else None,
+                        error=(self.translate("token_rejected", "Home Assistant rejected the token. Check it in the module's settings.")
+                               if all_failed and self.last_error == "rejected"
+                               else self.translate("connection_error", "Connection error") if all_failed else None),
                         last_checked=datetime.now().strftime("%H:%M"),
                         heading=heading,
                         show_header=show_header,
                         width=width,
-                        max_width=max_width,
                         height=height
                     )
                 except Exception as fetch_err:
@@ -416,7 +380,6 @@ class HomeassistantModule:
                         heading=heading,
                         show_header=show_header,
                         width=width,
-                        max_width=max_width,
                         height=height
                     )
                 

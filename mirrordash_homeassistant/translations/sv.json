@@ -6,7 +6,6 @@
   "no_entities": "Inga entiteter konfigurerade",
   "entity_not_found": "Entitet hittades ej",
   "unreachable": "Kunde inte ansluta till Home Assistant",
-  
   "state_on": "På",
   "state_off": "Av",
   "state_open": "Öppen",
@@ -16,5 +15,6 @@
   "state_motion_detected": "Rörelse",
   "state_motion_clear": "Ingen rörelse",
   "state_running": "Körs",
-  "state_idle": "Klar"
+  "state_idle": "Klar",
+  "token_rejected": "Home Assistant godtog inte token. Kontrollera den i modulens inställningar."
 }

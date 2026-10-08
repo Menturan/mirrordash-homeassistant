@@ -3,7 +3,28 @@ import json
 import io
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
-from mirrordash_homeassistant.plugin import HomeassistantModule, fetch_entity_state, resolve_smart_state_and_icon
+from mirrordash_homeassistant.plugin import HomeassistantModule, resolve_smart_state_and_icon
+
+TEMP = {"entity_id": "sensor.living_room_temp", "state": "21.5",
+        "attributes": {"friendly_name": "Living Room Temp", "unit_of_measurement": "°C"}}
+
+
+def fake_ha(states=None, error=None, all_states=True):
+    """A stand-in for the mirror's fetch_json: /api/states gives every state, /api/states/<id> one.
+    all_states=False: the bulk call fails, so each entity is asked for on its own."""
+    calls = []
+
+    async def fetch_json(url, headers=None, params=None, timeout=10):
+        calls.append(url)
+        assert headers == {"Authorization": "Bearer fake_token"}
+        if error:
+            return None, error
+        if url.endswith("/api/states"):
+            return (states, None) if all_states else (None, "http 500")
+        match = [st for st in states or [] if url.endswith("/" + st["entity_id"])]
+        return (match[0], None) if match else (None, "http 404")
+    fetch_json.calls = calls
+    return fetch_json
 
 def test_resolve_smart_state_and_icon():
     # Helper dummy translate function
@@ -78,77 +99,40 @@ def test_resolve_smart_state_and_icon():
 
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_entity_state_success(mock_urlopen):
-    # Setup mock response
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = json.dumps({
-        "entity_id": "sensor.test_temp",
-        "state": "22.4",
-        "attributes": {
-            "friendly_name": "Test Temperature",
-            "unit_of_measurement": "°C"
-        }
-    }).encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
-
-    res = fetch_entity_state("http://localhost:8123", "fake_token", "sensor.test_temp")
-    assert res is not None
-    assert res["state"] == "22.4"
-    assert res["attributes"]["friendly_name"] == "Test Temperature"
-
-@patch("urllib.request.urlopen")
-def test_fetch_entity_state_failure(mock_urlopen):
-    # Setup mock response with non-200 code
-    mock_response = MagicMock()
-    mock_response.status = 404
-    mock_urlopen.return_value.__enter__.return_value = mock_response
-
-    res = fetch_entity_state("http://localhost:8123", "fake_token", "sensor.non_existent")
-    assert res is None
-
-@patch("urllib.request.urlopen")
-def test_fetch_entity_state_exception(mock_urlopen):
-    # Setup mock to raise exception
-    mock_urlopen.side_effect = Exception("Connection refused")
-
-    res = fetch_entity_state("http://localhost:8123", "fake_token", "sensor.test_temp")
-    assert res is None
-
 @pytest.mark.asyncio
-@patch("urllib.request.urlopen")
-async def test_fetch_all_states_mapping(mock_urlopen):
-    # Setup mock response
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = json.dumps({
-        "entity_id": "sensor.living_room_temp",
-        "state": "21.5",
-        "attributes": {
-            "friendly_name": "Living Room Temp",
-            "unit_of_measurement": "°C"
-        }
-    }).encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
-
-    config = {
-        "url": "http://localhost:8123",
-        "token": "fake_token",
-        "entities": [
-            {"entity_id": "sensor.living_room_temp", "custom_name": "Living Room"}
-        ]
-    }
-    
+async def test_fetch_all_states_mapping():
+    config = {"url": "http://localhost:8123", "token": "fake_token",
+              "entities": [{"entity_id": "sensor.living_room_temp", "custom_name": "Living Room"}]}
     module = HomeassistantModule(config)
-    states = await module.fetch_all_states("http://localhost:8123", "fake_token", config["entities"])
-    
+    module.fetch_json = fake_ha([TEMP], all_states=False)  # found through the single-entity call
+    states = await module.fetch_all_states("http://localhost:8123/", "fake_token", config["entities"])
+
+    assert module.fetch_json.calls == ["http://localhost:8123/api/states", "http://localhost:8123/api/states/sensor.living_room_temp"]
     assert len(states) == 1
-    assert states[0]["entity_id"] == "sensor.living_room_temp"
     assert states[0]["name"] == "Living Room"
     assert states[0]["state"] == "21.5 °C"
     assert states[0]["icon"] == "thermometer"
     assert not states[0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_missing_entity_is_marked_not_found():
+    module = HomeassistantModule({})
+    module.fetch_json = fake_ha([TEMP])
+    states = await module.fetch_all_states("http://localhost:8123", "fake_token", [{"entity_id": "sensor.gone"}])
+    assert states[0]["error"] is True
+
+
+@pytest.mark.asyncio
+async def test_rejected_token_says_so():
+    config = {"url": "http://localhost:8123", "token": "fake_token", "entities": [{"entity_id": "sensor.living_room_temp"}]}
+    module = HomeassistantModule(config)
+    module.fetch_json = fake_ha(error="rejected")
+    module.render_template = MagicMock(return_value="<div></div>")
+    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
+        with pytest.raises(asyncio.CancelledError):
+            await module.run_loop(AsyncMock())
+    assert "rejected the token" in module.render_template.call_args.kwargs["error"]
 
 @pytest.mark.asyncio
 async def test_run_loop_missing_token():
@@ -179,7 +163,6 @@ async def test_run_loop_missing_token():
         heading="",
         show_header=True,
         width="100%",
-        max_width="380px",
         height="auto"
     )
 
@@ -211,7 +194,6 @@ async def test_run_loop_missing_entities():
         heading="",
         show_header=True,
         width="100%",
-        max_width="380px",
         height="auto"
     )
 
@@ -241,26 +223,13 @@ async def test_run_loop_custom_heading():
         heading="My Custom Devices",
         show_header=True,
         width="100%",
-        max_width="380px",
         height="auto"
     )
 
 @pytest.mark.asyncio
-@patch("urllib.request.urlopen")
-async def test_run_loop_with_groups(mock_urlopen):
-    # Mock HA response
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = json.dumps({
-        "entity_id": "sensor.living_room_temp",
-        "state": "22.4",
-        "attributes": {
-            "friendly_name": "Living Room Temp",
-            "unit_of_measurement": "°C",
-            "battery": 88
-        }
-    }).encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+async def test_run_loop_with_groups():
+    entity_state = {"entity_id": "sensor.living_room_temp", "state": "22.4",
+                    "attributes": {"friendly_name": "Living Room Temp", "unit_of_measurement": "°C", "battery": 88}}
 
     config = {
         "url": "http://localhost:8123",
@@ -274,6 +243,7 @@ async def test_run_loop_with_groups(mock_urlopen):
         ]
     }
     module = HomeassistantModule(config)
+    module.fetch_json = fake_ha([entity_state])
     module.render_template = MagicMock(return_value="<div>Groups OK</div>")
     
     broadcast_func = AsyncMock()
@@ -298,12 +268,8 @@ async def test_run_loop_with_groups(mock_urlopen):
     assert entity["battery"] == 88
 
 @pytest.mark.asyncio
-@patch("urllib.request.urlopen")
-async def test_companion_attribute_lookup(mock_urlopen):
-    # Mock HA response returning a list of states for bulk fetch
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = json.dumps([
+async def test_companion_attribute_lookup():
+    bulk = [
         {
             "entity_id": "sensor.living_room_temp",
             "state": "22.4",
@@ -321,8 +287,7 @@ async def test_companion_attribute_lookup(mock_urlopen):
                 "device_class": "battery"
             }
         }
-    ]).encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    ]
 
     config = {
         "url": "http://localhost:8123",
@@ -335,7 +300,8 @@ async def test_companion_attribute_lookup(mock_urlopen):
         ]
     }
     module = HomeassistantModule(config)
-    
+    module.fetch_json = fake_ha(bulk)
+
     # Run fetch_all_states
     states = await module.fetch_all_states("http://localhost:8123", "fake_token", config["entities"])
     

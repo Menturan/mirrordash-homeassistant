@@ -1,14 +1,11 @@
-<div class="ha-container" style="width: {{ width }}; max-width: {{ max_width }}; height: {{ height }};">
+<div class="ha-container" style="width: {{ width }}; height: {{ height }};">
     {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}
     
     <div class="ha-body">
         {% if error %}
-            <div class="ha-error">
-                <i data-lucide="alert-circle" class="ha-error-icon"></i>
-                <span>{{ error }}</span>
-            </div>
+            <div class="module-message"><i data-lucide="alert-circle"></i><span>{{ error }}</span></div>
         {% endif %}
         
         {% if groups %}
@@ -117,6 +114,7 @@
     </div>
 </div>
 
+<!-- Header and messages come from modules.css; only the entity cards' own look is here -->
 <style>
 .ha-container {
     display: flex;
@@ -124,29 +122,6 @@
     width: 100%;
     max-width: 380px;
     color: var(--color-standard-gray, #999999);
-    font-family: var(--mirror-font-family, sans-serif);
-}
-
-/* Alignment Snapping based on anchor position */
-#top_right .ha-container,
-#middle_right .ha-container,
-#bottom_right .ha-container {
-    align-items: flex-end;
-    text-align: right;
-}
-
-#top_right .ha-compact-row,
-#middle_right .ha-compact-row,
-#bottom_right .ha-compact-row {
-    flex-direction: row-reverse;
-}
-
-#top_right .ha-compact-metadata,
-#middle_right .ha-compact-metadata,
-#bottom_right .ha-compact-metadata {
-    flex-direction: row-reverse;
-    padding-right: 24px;
-    padding-left: 0;
 }
 
 .ha-body {
@@ -326,11 +301,11 @@
 }
 
 .ha-status-pip.active {
-    background-color: var(--color-accent-active, #a0ffba);
+    background-color: var(--color-status-online);
 }
 
 .ha-status-pip.alert {
-    background-color: var(--color-accent-warm, #fecdd3);
+    background-color: var(--color-status-warning);
 }
 
 .ha-text-active {
@@ -343,22 +318,6 @@
 
 .ha-text-error {
     color: var(--color-error, #ffb4ab);
-}
-
-.ha-error {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-error, #ffb4ab);
-    font-size: 13px;
-    padding: 8px 0;
-}
-
-.ha-error-icon {
-    width: 16px;
-    height: 16px;
-    stroke-width: 1.5px;
-    flex-shrink: 0;
 }
 
 @keyframes haFadeIn {

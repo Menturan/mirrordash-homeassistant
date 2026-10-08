@@ -2,15 +2,21 @@
 name = "mirrordash-homeassistant"
 version = "1.0.1"
 description = "Fetches and displays states from a local Home Assistant system."
+requires-python = ">=3.14"
 authors = [
     { name = "MirrorDash Developer" }
 ]
-dependencies = [
-    "jinja2"
-]
+# The mirror provides the rest (rendering, fetch_json, translations); add only what plugin.py imports
+dependencies = []
 
 [project.entry-points."mirrordash.modules"]
 mirrordash_homeassistant = "mirrordash_homeassistant.plugin:HomeassistantModule"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
 
 [build-system]
 requires = ["hatchling"]

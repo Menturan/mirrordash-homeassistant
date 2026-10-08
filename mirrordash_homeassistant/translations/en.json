@@ -6,7 +6,6 @@
   "no_entities": "No entities configured",
   "entity_not_found": "Entity not found",
   "unreachable": "Could not connect to Home Assistant",
-  
   "state_on": "On",
   "state_off": "Off",
   "state_open": "Open",
@@ -16,5 +15,6 @@
   "state_motion_detected": "Active",
   "state_motion_clear": "Clear",
   "state_running": "Running",
-  "state_idle": "Idle"
+  "state_idle": "Idle",
+  "token_rejected": "Home Assistant rejected the token. Check it in the module's settings."
 }
