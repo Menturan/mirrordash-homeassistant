@@ -168,7 +168,8 @@ class HomeassistantModule:
     async def fetch_states(self, path: str, token: str):
         """One Home Assistant API call; (answer, error). A saved earlier answer is not used: a home's
         state from an hour ago would look current, so on a failure the answer is None."""
-        data, error = await self.fetch_json(path, headers={"Authorization": f"Bearer {token}"}, timeout=5)
+        data, error = await self.fetch_json(path, headers={"Authorization": f"Bearer {token}"}, timeout=5,
+                                             max_age=self.interval)
         if error:
             logger.debug(f"Home Assistant {path}: {error}")
             self.last_error = error

@@ -14,7 +14,7 @@ def fake_ha(states=None, error=None, all_states=True):
     all_states=False: the bulk call fails, so each entity is asked for on its own."""
     calls = []
 
-    async def fetch_json(url, headers=None, params=None, timeout=10):
+    async def fetch_json(url, headers=None, params=None, timeout=10, max_age=None):
         calls.append(url)
         assert headers == {"Authorization": "Bearer fake_token"}
         if error:
