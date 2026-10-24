@@ -14,7 +14,8 @@
       "type": "string",
       "default": "http://homeassistant.local:8123",
       "title": "Home Assistant URL",
-      "description": "The base URL of your local Home Assistant instance."
+      "description": "The base URL of your local Home Assistant instance.",
+      "format": "lan-url"
     },
     "token": {
       "type": "string",
