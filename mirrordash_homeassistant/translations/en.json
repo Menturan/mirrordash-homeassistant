@@ -16,5 +16,6 @@
   "state_motion_clear": "Clear",
   "state_running": "Running",
   "state_idle": "Idle",
-  "token_rejected": "Home Assistant rejected the token. Check it in the module's settings."
+  "token_rejected": "Home Assistant rejected the token. Check it in the module's settings.",
+  "no_url": "Type your Home Assistant address in the module's settings"
 }

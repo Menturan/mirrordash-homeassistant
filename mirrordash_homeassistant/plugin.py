@@ -261,34 +261,24 @@ class HomeassistantModule:
         logger.info(f"Starting {self.name} run loop")
         while True:
             try:
-                url = self.config.get("url", "http://homeassistant.local:8123")
+                # The schema's default is only a hint: the sandbox lets the module reach the address the owner typed
+                url = (self.config.get("url") or "").strip()
                 token = self.config.get("token")
                 entity_configs = self.config.get("entities", [])
                 heading = self.config.get("heading", "")
                 show_header = self.config.get("show_header", True)
                 width = self.config.get("width", "100%")
                 height = self.config.get("height", "auto")
-                
-                # Check for token
-                if not token:
+
+                # A setting missing: say which, instead of a connection error
+                missing = (self.translate("no_url", "Type your Home Assistant address in the module's settings") if not url
+                           else self.translate("no_token", "API Token is missing") if not token
+                           else self.translate("no_entities", "No entities configured") if not entity_configs
+                           else None)
+                if missing:
                     html = self.render_template(
                         "widget.html",
-                        error=self.translate("no_token", "API Token is missing"),
-                        groups=[],
-                        heading=heading,
-                        show_header=show_header,
-                        width=width,
-                        height=height
-                    )
-                    await broadcast_func(self.name, html)
-                    await asyncio.sleep(self.interval)
-                    continue
-                
-                # Check for configured entities
-                if not entity_configs:
-                    html = self.render_template(
-                        "widget.html",
-                        error=self.translate("no_entities", "No entities configured"),
+                        error=missing,
                         groups=[],
                         heading=heading,
                         show_header=show_header,

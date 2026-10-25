@@ -167,6 +167,21 @@ async def test_run_loop_missing_token():
     )
 
 @pytest.mark.asyncio
+async def test_run_loop_without_an_address_asks_for_one():
+    """The schema's default address is only a hint the sandbox doesn't open: no address typed (none saved,
+    or saved empty) is said on the card, not tried."""
+    for config in ({"token": "fake_token", "entities": [{"entity_id": "sensor.temp"}]},
+                   {"url": " ", "token": "fake_token", "entities": [{"entity_id": "sensor.temp"}]}):
+        module = HomeassistantModule(config)
+        module.render_template = MagicMock(return_value="<div></div>")
+        module.fetch_json = AsyncMock()
+        with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
+            with pytest.raises(asyncio.CancelledError):
+                await module.run_loop(AsyncMock())
+        module.fetch_json.assert_not_called()
+        assert module.render_template.call_args.kwargs["error"] == "Type your Home Assistant address in the module's settings"
+
+@pytest.mark.asyncio
 async def test_run_loop_missing_entities():
     config = {
         "url": "http://localhost:8123",
