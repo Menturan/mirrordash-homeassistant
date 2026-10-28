@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from datetime import datetime
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
 
@@ -351,7 +350,6 @@ class HomeassistantModule:
                 error=(self.translate("token_rejected", "Home Assistant rejected the token. Check it in the module's settings.")
                        if all_failed and self.last_error == "rejected"
                        else self.translate("connection_error", "Connection error") if all_failed else None),
-                last_checked=datetime.now().strftime("%H:%M"),
                 heading=heading,
                 show_header=show_header,
                 width=width,

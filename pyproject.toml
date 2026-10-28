@@ -3,6 +3,8 @@ name = "mirrordash-homeassistant"
 version = "1.2.0"
 description = "Fetches and displays states from a local Home Assistant system."
 requires-python = ">=3.14"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "MirrorDash Developer" }
 ]
