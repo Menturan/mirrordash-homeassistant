@@ -1,8 +1,7 @@
 import pytest
 import json
 import io
-import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from mirrordash_homeassistant.plugin import HomeassistantModule, resolve_smart_state_and_icon
 
 TEMP = {"entity_id": "sensor.living_room_temp", "state": "21.5",
@@ -129,13 +128,11 @@ async def test_rejected_token_says_so():
     module = HomeassistantModule(config)
     module.fetch_json = fake_ha(error="rejected")
     module.render_template = MagicMock(return_value="<div></div>")
-    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-        with pytest.raises(asyncio.CancelledError):
-            await module.run_loop(AsyncMock())
+    await module.render()
     assert "rejected the token" in module.render_template.call_args.kwargs["error"]
 
 @pytest.mark.asyncio
-async def test_run_loop_missing_token():
+async def test_render_missing_token():
     config = {
         "url": "http://localhost:8123",
         "entities": [{"entity_id": "sensor.temp"}]
@@ -143,19 +140,9 @@ async def test_run_loop_missing_token():
     module = HomeassistantModule(config)
     module.render_template = MagicMock(return_value="<div>Missing Token</div>")
     
-    broadcast_func = AsyncMock()
-    
-    # Run the loop logic once by patching asyncio.sleep to break the loop
-    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-        try:
-            await module.run_loop(broadcast_func)
-        except asyncio.CancelledError:
-            pass
+    html = await module.render()
             
-    broadcast_func.assert_called_once()
-    args = broadcast_func.call_args[0]
-    assert args[0] == "mirrordash_homeassistant"
-    assert "Missing Token" in args[1]
+    assert "Missing Token" in html
     module.render_template.assert_called_with(
         "widget.html",
         error="API Token is missing",
@@ -167,7 +154,7 @@ async def test_run_loop_missing_token():
     )
 
 @pytest.mark.asyncio
-async def test_run_loop_without_an_address_asks_for_one():
+async def test_render_without_an_address_asks_for_one():
     """The schema's default address is only a hint the sandbox doesn't open: no address typed (none saved,
     or saved empty) is said on the card, not tried."""
     for config in ({"token": "fake_token", "entities": [{"entity_id": "sensor.temp"}]},
@@ -175,14 +162,12 @@ async def test_run_loop_without_an_address_asks_for_one():
         module = HomeassistantModule(config)
         module.render_template = MagicMock(return_value="<div></div>")
         module.fetch_json = AsyncMock()
-        with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-            with pytest.raises(asyncio.CancelledError):
-                await module.run_loop(AsyncMock())
+        await module.render()
         module.fetch_json.assert_not_called()
         assert module.render_template.call_args.kwargs["error"] == "Type your Home Assistant address in the module's settings"
 
 @pytest.mark.asyncio
-async def test_run_loop_missing_entities():
+async def test_render_missing_entities():
     config = {
         "url": "http://localhost:8123",
         "token": "fake_token",
@@ -191,17 +176,9 @@ async def test_run_loop_missing_entities():
     module = HomeassistantModule(config)
     module.render_template = MagicMock(return_value="<div>No Entities</div>")
     
-    broadcast_func = AsyncMock()
-    
-    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-        try:
-            await module.run_loop(broadcast_func)
-        except asyncio.CancelledError:
-            pass
+    html = await module.render()
             
-    broadcast_func.assert_called_once()
-    args = broadcast_func.call_args[0]
-    assert "No Entities" in args[1]
+    assert "No Entities" in html
     module.render_template.assert_called_with(
         "widget.html",
         error="No entities configured",
@@ -213,7 +190,7 @@ async def test_run_loop_missing_entities():
     )
 
 @pytest.mark.asyncio
-async def test_run_loop_custom_heading():
+async def test_render_custom_heading():
     config = {
         "url": "http://localhost:8123",
         "token": "fake_token",
@@ -223,13 +200,7 @@ async def test_run_loop_custom_heading():
     module = HomeassistantModule(config)
     module.render_template = MagicMock(return_value="<div>Custom Heading</div>")
     
-    broadcast_func = AsyncMock()
-    
-    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-        try:
-            await module.run_loop(broadcast_func)
-        except asyncio.CancelledError:
-            pass
+    await module.render()
             
     module.render_template.assert_called_with(
         "widget.html",
@@ -242,7 +213,7 @@ async def test_run_loop_custom_heading():
     )
 
 @pytest.mark.asyncio
-async def test_run_loop_with_groups():
+async def test_render_with_groups():
     entity_state = {"entity_id": "sensor.living_room_temp", "state": "22.4",
                     "attributes": {"friendly_name": "Living Room Temp", "unit_of_measurement": "°C", "battery": 88}}
 
@@ -261,12 +232,7 @@ async def test_run_loop_with_groups():
     module.fetch_json = fake_ha([entity_state])
     module.render_template = MagicMock(return_value="<div>Groups OK</div>")
     
-    broadcast_func = AsyncMock()
-    with patch("asyncio.sleep", side_effect=asyncio.CancelledError):
-        try:
-            await module.run_loop(broadcast_func)
-        except asyncio.CancelledError:
-            pass
+    await module.render()
             
     module.render_template.assert_called_once()
     args, kwargs = module.render_template.call_args

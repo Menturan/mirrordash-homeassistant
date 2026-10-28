@@ -168,8 +168,7 @@ class HomeassistantModule:
     async def fetch_states(self, path: str, token: str):
         """One Home Assistant API call; (answer, error). A saved earlier answer is not used: a home's
         state from an hour ago would look current, so on a failure the answer is None."""
-        data, error = await self.fetch_json(path, headers={"Authorization": f"Bearer {token}"}, timeout=5,
-                                             max_age=self.interval)
+        data, error = await self.fetch_json(path, headers={"Authorization": f"Bearer {token}"}, timeout=5)
         if error:
             logger.debug(f"Home Assistant {path}: {error}")
             self.last_error = error
@@ -257,129 +256,117 @@ class HomeassistantModule:
         tasks = [resolve_one(cfg) for cfg in entity_configs]
         return await asyncio.gather(*tasks)
 
-    async def run_loop(self, broadcast_func):
-        logger.info(f"Starting {self.name} run loop")
-        while True:
-            try:
-                # The schema's default is only a hint: the sandbox lets the module reach the address the owner typed
-                url = (self.config.get("url") or "").strip()
-                token = self.config.get("token")
-                entity_configs = self.config.get("entities", [])
-                heading = self.config.get("heading", "")
-                show_header = self.config.get("show_header", True)
-                width = self.config.get("width", "100%")
-                height = self.config.get("height", "auto")
+    async def render(self) -> str:
+        """The entities' states, grouped; the mirror shows it every interval."""
+        # The schema's default is only a hint: the sandbox lets the module reach the address the owner typed
+        url = (self.config.get("url") or "").strip()
+        token = self.config.get("token")
+        entity_configs = self.config.get("entities", [])
+        heading = self.config.get("heading", "")
+        show_header = self.config.get("show_header", True)
+        width = self.config.get("width", "100%")
+        height = self.config.get("height", "auto")
 
-                # A setting missing: say which, instead of a connection error
-                missing = (self.translate("no_url", "Type your Home Assistant address in the module's settings") if not url
-                           else self.translate("no_token", "API Token is missing") if not token
-                           else self.translate("no_entities", "No entities configured") if not entity_configs
-                           else None)
-                if missing:
-                    html = self.render_template(
-                        "widget.html",
-                        error=missing,
-                        groups=[],
-                        heading=heading,
-                        show_header=show_header,
-                        width=width,
-                        height=height
-                    )
-                    await broadcast_func(self.name, html)
-                    await asyncio.sleep(self.interval)
-                    continue
+        # A setting missing: say which, instead of a connection error
+        missing = (self.translate("no_url", "Type your Home Assistant address in the module's settings") if not url
+                   else self.translate("no_token", "API Token is missing") if not token
+                   else self.translate("no_entities", "No entities configured") if not entity_configs
+                   else None)
+        if missing:
+            html = self.render_template(
+                "widget.html",
+                error=missing,
+                groups=[],
+                heading=heading,
+                show_header=show_header,
+                width=width,
+                height=height
+            )
+            return html
 
-                # Fetch entity states
-                try:
-                    fetched_entities = []
-                    if entity_configs:
-                        fetched_entities = await self.fetch_all_states(url, token, entity_configs)
+        # Fetch entity states
+        try:
+            fetched_entities = []
+            if entity_configs:
+                fetched_entities = await self.fetch_all_states(url, token, entity_configs)
+            
+            all_failed = len(fetched_entities) > 0 and all(e["error"] for e in fetched_entities)
+            
+            # Group entities dynamically by group name, preserving order of first appearance
+            groups_ordered = []
+            groups_map = {}
+            
+            for ent in fetched_entities:
+                cfg = next((c for c in entity_configs if c["entity_id"] == ent["entity_id"]), {})
+                group_name = cfg.get("group", "").strip()
+                layout = cfg.get("layout") or self.config.get("layout", "compact")
+                
+                ent["layout"] = layout
+                
+                if group_name not in groups_map:
+                    group_obj = {
+                        "name": group_name,
+                        "entities": []
+                    }
+                    groups_map[group_name] = group_obj
+                    groups_ordered.append(group_obj)
                     
-                    all_failed = len(fetched_entities) > 0 and all(e["error"] for e in fetched_entities)
-                    
-                    # Group entities dynamically by group name, preserving order of first appearance
-                    groups_ordered = []
-                    groups_map = {}
-                    
-                    for ent in fetched_entities:
-                        cfg = next((c for c in entity_configs if c["entity_id"] == ent["entity_id"]), {})
-                        group_name = cfg.get("group", "").strip()
-                        layout = cfg.get("layout") or self.config.get("layout", "compact")
-                        
-                        ent["layout"] = layout
-                        
-                        if group_name not in groups_map:
-                            group_obj = {
-                                "name": group_name,
-                                "entities": []
-                            }
-                            groups_map[group_name] = group_obj
-                            groups_ordered.append(group_obj)
-                            
-                        groups_map[group_name]["entities"].append(ent)
-                        
-                    # Build rendering blocks (consecutive compact items grouped together)
-                    groups = []
-                    for group_obj in groups_ordered:
-                        blocks = []
-                        current_compact_list = []
-                        
-                        for ent in group_obj["entities"]:
-                            if ent["layout"] == "detailed":
-                                if current_compact_list:
-                                    blocks.append({
-                                        "type": "compact",
-                                        "entities": current_compact_list
-                                    })
-                                    current_compact_list = []
-                                blocks.append({
-                                    "type": "detailed",
-                                    "entity": ent
-                                })
-                            else:
-                                current_compact_list.append(ent)
-                                
+                groups_map[group_name]["entities"].append(ent)
+                
+            # Build rendering blocks (consecutive compact items grouped together)
+            groups = []
+            for group_obj in groups_ordered:
+                blocks = []
+                current_compact_list = []
+                
+                for ent in group_obj["entities"]:
+                    if ent["layout"] == "detailed":
                         if current_compact_list:
                             blocks.append({
                                 "type": "compact",
                                 "entities": current_compact_list
                             })
-                            
-                        groups.append({
-                            "name": group_obj["name"],
-                            "blocks": blocks
+                            current_compact_list = []
+                        blocks.append({
+                            "type": "detailed",
+                            "entity": ent
                         })
+                    else:
+                        current_compact_list.append(ent)
+                        
+                if current_compact_list:
+                    blocks.append({
+                        "type": "compact",
+                        "entities": current_compact_list
+                    })
+                    
+                groups.append({
+                    "name": group_obj["name"],
+                    "blocks": blocks
+                })
 
-                    html = self.render_template(
-                        "widget.html",
-                        groups=groups,
-                        error=(self.translate("token_rejected", "Home Assistant rejected the token. Check it in the module's settings.")
-                               if all_failed and self.last_error == "rejected"
-                               else self.translate("connection_error", "Connection error") if all_failed else None),
-                        last_checked=datetime.now().strftime("%H:%M"),
-                        heading=heading,
-                        show_header=show_header,
-                        width=width,
-                        height=height
-                    )
-                except Exception as fetch_err:
-                    logger.error(f"Error fetching states: {fetch_err}")
-                    html = self.render_template(
-                        "widget.html",
-                        groups=[],
-                        error=self.translate("unreachable", "Could not connect to Home Assistant"),
-                        heading=heading,
-                        show_header=show_header,
-                        width=width,
-                        height=height
-                    )
-                
-                await broadcast_func(self.name, html)
-                
-            except asyncio.CancelledError:
-                logger.info(f"Stopping {self.name} run loop.")
-                raise
-            except Exception as e:
-                logger.error(f"Error in module {self.name} run_loop: {e}")
-                
-            await asyncio.sleep(self.interval)
+            html = self.render_template(
+                "widget.html",
+                groups=groups,
+                error=(self.translate("token_rejected", "Home Assistant rejected the token. Check it in the module's settings.")
+                       if all_failed and self.last_error == "rejected"
+                       else self.translate("connection_error", "Connection error") if all_failed else None),
+                last_checked=datetime.now().strftime("%H:%M"),
+                heading=heading,
+                show_header=show_header,
+                width=width,
+                height=height
+            )
+        except Exception as fetch_err:
+            logger.error(f"Error fetching states: {fetch_err}")
+            html = self.render_template(
+                "widget.html",
+                groups=[],
+                error=self.translate("unreachable", "Could not connect to Home Assistant"),
+                heading=heading,
+                show_header=show_header,
+                width=width,
+                height=height
+            )
+
+        return html
