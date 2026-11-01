@@ -1,6 +1,6 @@
 [project]
 name = "mirrordash-homeassistant"
-version = "1.2.1"
+version = "1.2.2"
 description = "Fetches and displays states from a local Home Assistant system."
 requires-python = ">=3.14"
 license = "MIT"
