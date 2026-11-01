@@ -292,3 +292,71 @@ async def test_companion_attribute_lookup():
     assert entity["battery"] == "75"
 
 
+def test_domain_and_device_class_before_name():
+    """The name is a hint by whole words: light.outdoor is no door, switch.alarm_clock no lock."""
+    def english(key, default):
+        return default
+    cases = [  # entity, state, attributes -> state text, icon
+        ("lock.front_door_lock", "locked", {}, "Locked", "lock"),
+        ("light.outdoor", "on", {}, "On", "lightbulb"),
+        ("switch.alarm_clock", "on", {}, "On", "power"),
+        ("cover.living_room_blinds", "open", {}, "Open", "blinds"),
+        ("cover.garage", "closed", {"device_class": "garage"}, "Closed", "door-closed"),
+        ("sensor.login_attempts", "3", {}, "3", "info"),
+        ("sensor.phone", "80", {"device_class": "battery", "unit_of_measurement": "%"}, "80 %", "battery"),
+        ("sensor.front_door_temperature", "4", {"unit_of_measurement": "°C"}, "4 °C", "thermometer"),
+        ("sensor.power_meter", "5", {"unit_of_measurement": None, "device_class": None}, "5", "info"),
+        ("media_player.tv", "playing", {}, "Playing", "play"),
+        ("sensor.room_temp", "unavailable", {"unit_of_measurement": "°C"}, "Unavailable", "thermometer"),
+    ]
+    for entity_id, state, attrs, text, icon in cases:
+        assert resolve_smart_state_and_icon(entity_id, state, attrs, english)[:2] == (text, icon), entity_id
+
+
+@pytest.mark.asyncio
+async def test_companions_are_other_sensors():
+    bulk = [{"entity_id": "sensor.kitchen_humidity", "state": "41", "attributes": {"unit_of_measurement": "%"}},
+            {"entity_id": "sensor.heater_power", "state": "1500", "attributes": {"unit_of_measurement": "W"}},
+            {"entity_id": "switch.heater", "state": "on", "attributes": {}}]
+    module = HomeassistantModule({})
+    module.fetch_json = fake_ha(bulk)
+    humidity, heater = await module.fetch_all_states(
+        "http://localhost:8123", "fake_token", [{"entity_id": "sensor.kitchen_humidity"}, {"entity_id": "switch.heater"}])
+    assert humidity["humidity"] is None  # not its own value again
+    assert heater["battery"] is None  # a power meter is no battery
+
+
+async def rendered(config, states=None, error=None):
+    module = HomeassistantModule({"url": "http://localhost:8123", "token": "fake_token", **config})
+    module.fetch_json = fake_ha(states, error=error)
+    module.render_template = MagicMock(return_value="")
+    await module.render()
+    return module.render_template.call_args.kwargs
+
+
+@pytest.mark.asyncio
+async def test_rows_as_the_form_saves_them():
+    """Each row keeps its own group and layout, "" follows the module's Layout Style, empty rows and spaces are fine."""
+    kw = await rendered({"layout": "detailed", "entities": [
+        {"entity_id": "sensor.living_room_temp", "group": "A", "layout": "compact"},
+        {"entity_id": "sensor.living_room_temp ", "group": "B", "layout": ""},
+        {"entity_id": "", "group": "", "layout": ""},
+    ]}, [TEMP])
+    assert kw["error"] is None
+    assert [(g["name"], [b["type"] for b in g["blocks"]]) for g in kw["groups"]] == [("A", ["compact"]), ("B", ["detailed"])]
+
+
+@pytest.mark.asyncio
+async def test_unreachable_says_so_without_not_found_rows():
+    kw = await rendered({"entities": [{"entity_id": "sensor.living_room_temp"}]}, error="offline")
+    assert kw["error"] == "Connection error"
+    assert kw["groups"] == []
+
+
+@pytest.mark.asyncio
+async def test_a_missing_entity_is_no_connection_error():
+    kw = await rendered({"entities": [{"entity_id": "sensor.gone"}]}, [TEMP])
+    assert kw["error"] is None
+    assert kw["groups"][0]["blocks"][0]["entity"]["error"] is True
+
+

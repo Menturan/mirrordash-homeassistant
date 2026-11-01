@@ -87,13 +87,19 @@
           },
           "layout": {
             "type": "string",
-            "default": "compact",
+            "default": "",
             "enum": [
+              "",
               "detailed",
               "compact"
             ],
+            "enum_titles": [
+              "As the module",
+              "Detailed",
+              "Compact"
+            ],
             "title": "Layout Style",
-            "description": "Visual presentation: 'detailed' (large single value) or 'compact' (dense list row)."
+            "description": "Visual presentation: as the module's Layout Style, 'detailed' (large single value) or 'compact' (dense list row)."
           }
         },
         "required": [

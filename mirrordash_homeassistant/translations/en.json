@@ -1,6 +1,5 @@
 {
   "title": "Home Assistant",
-  "last_checked": "Last checked",
   "connection_error": "Connection error",
   "no_token": "API Token is missing",
   "no_entities": "No entities configured",
@@ -16,6 +15,14 @@
   "state_motion_clear": "Clear",
   "state_running": "Running",
   "state_idle": "Idle",
+  "state_unavailable": "Unavailable",
+  "state_unknown": "Unknown",
+  "state_playing": "Playing",
+  "state_paused": "Paused",
+  "humidity": "Humidity",
+  "battery": "Battery",
+  "signal": "Signal",
+  "voltage": "Voltage",
   "token_rejected": "Home Assistant rejected the token. Check it in the module's settings.",
   "no_url": "Type your Home Assistant address in the module's settings"
 }

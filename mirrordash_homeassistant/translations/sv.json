@@ -1,6 +1,5 @@
 {
   "title": "Hemautomation",
-  "last_checked": "Senast kontrollerad",
   "connection_error": "Anslutningsfel",
   "no_token": "API-token saknas",
   "no_entities": "Inga entiteter konfigurerade",
@@ -16,6 +15,14 @@
   "state_motion_clear": "Ingen rörelse",
   "state_running": "Körs",
   "state_idle": "Klar",
+  "state_unavailable": "Ej tillgänglig",
+  "state_unknown": "Okänt",
+  "state_playing": "Spelar",
+  "state_paused": "Pausad",
+  "humidity": "Fukt",
+  "battery": "Batteri",
+  "signal": "Signal",
+  "voltage": "Spänning",
   "token_rejected": "Home Assistant godtog inte token. Kontrollera den i modulens inställningar.",
   "no_url": "Skriv in adressen till Home Assistant i modulens inställningar"
 }

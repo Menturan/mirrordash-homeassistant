@@ -1,7 +1,24 @@
 import asyncio
 import logging
+import re
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
+
+ACTIVE_STATES = {"on", "true", "detected", "running", "open", "unlocked", "playing"}
+ON_OFF_STATES = {"on", "off", "open", "closed", "locked", "unlocked", "true", "false", "detected", "clear", "running", "idle"}
+WASHING_WORDS = {"washing", "washer", "dryer", "tvättmaskin", "torktumlare"}
+DOOR_CLASSES = {"door", "window", "garage", "garage_door", "gate", "opening"}
+# kind -> (active, inactive) as (translation key, English)
+STATE_WORDS = {
+    "lock": (("state_unlocked", "Unlocked"), ("state_locked", "Locked")),
+    "washing": (("state_running", "Running"), ("state_idle", "Idle")),
+    "motion": (("state_motion_detected", "Active"), ("state_motion_clear", "Clear")),
+    "door": (("state_open", "Open"), ("state_closed", "Closed")),
+    "cover": (("state_open", "Open"), ("state_closed", "Closed")),
+    "other": (("state_on", "On"), ("state_off", "Off")),
+}
+OTHER_STATES = {"unavailable": ("state_unavailable", "Unavailable"), "unknown": ("state_unknown", "Unknown"),
+                "playing": ("state_playing", "Playing"), "paused": ("state_paused", "Paused")}
 
 def find_attribute(attributes: dict, keys: list[str]) -> any:
     """Finds an attribute value case-insensitively from a list of possible keys."""
@@ -55,7 +72,7 @@ def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: l
     if base_name != name:
         for suffix in attr_suffixes:
             cand = f"sensor.{base_name}{suffix}"
-            if cand in states_dict:
+            if cand in states_dict and cand != entity_id:  # a humidity sensor is not its own companion
                 val = states_dict[cand].get("state")
                 if val and val not in ("unknown", "unavailable"):
                     return val
@@ -63,87 +80,51 @@ def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: l
     return None
 
 def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dict, translate_func) -> tuple[str, str, bool]:
-    """
-    Resolves the icon, localized state string, and active status based on the entity domain,
-    device class, and attributes.
-    """
+    """(state text, Lucide icon, active) from the entity's domain and device class first; its name is
+    only a hint, matched by whole words (light.outdoor is no door, switch.alarm_clock no lock)."""
     domain = entity_id.split(".")[0]
-    device_class = attributes.get("device_class", "")
-    unit = attributes.get("unit_of_measurement", "")
-    entity_name_lower = entity_id.lower()
-    
-    # Defaults
-    icon = "info"
-    state_str = raw_state
-    
-    # Determine the entity class/domain
-    is_motion = "motion" in entity_name_lower or "occupancy" in entity_name_lower or device_class in ("motion", "occupancy")
-    is_washing = "washing_machine" in entity_name_lower or "washer" in entity_name_lower or "dryer" in entity_name_lower or "tvättmaskin" in entity_name_lower or "torktumlare" in entity_name_lower
-    is_door = "door" in entity_name_lower or "window" in entity_name_lower or "gate" in entity_name_lower or device_class in ("door", "window", "garage", "gate")
-    is_lock = "lock" in entity_name_lower or device_class == "lock"
-    
+    device_class = attributes.get("device_class") or ""  # HA may send null
+    unit = attributes.get("unit_of_measurement") or ""
+    words = set(re.split(r"[^a-zåäö0-9]+", entity_id.lower().split(".", 1)[-1]))
     state_lower = raw_state.lower()
-    is_active = state_lower in ("on", "true", "detected", "running", "open", "unlocked", "playing")
-    
-    # 1. Resolve Icon
-    if "temperature" in entity_name_lower or "temp" in entity_name_lower or "°" in unit:
-        icon = "thermometer"
-    elif "humidity" in entity_name_lower or "%" in unit:
-        icon = "droplet"
-    elif "power" in entity_name_lower or "energy" in entity_name_lower or "W" in unit or "kWh" in unit:
-        icon = "zap"
-    elif is_washing:
-        icon = "washing-machine"
-    elif is_motion:
-        icon = "activity" if is_active else "eye-off"
-    elif is_door:
-        icon = "door-open" if is_active else "door-closed"
-    elif is_lock:
-        icon = "unlock" if is_active else "lock"
-    elif domain == "light":
-        icon = "lightbulb"
-    elif domain == "switch":
-        icon = "power"
-    elif domain == "media_player":
-        icon = "play" if is_active else "square"
-    elif domain == "camera":
-        icon = "video"
-    elif domain == "vacuum":
-        icon = "trash-2"
-        
-    # 2. Localized States
-    if state_lower in ("on", "off", "open", "closed", "locked", "unlocked", "true", "false", "detected", "clear", "running", "idle"):
-        if is_motion:
-            if is_active:
-                state_str = translate_func("state_motion_detected", "Active")
-            else:
-                state_str = translate_func("state_motion_clear", "Clear")
-        elif is_washing:
-            if is_active:
-                state_str = translate_func("state_running", "Running")
-            else:
-                state_str = translate_func("state_idle", "Idle")
-        elif is_door:
-            if is_active:
-                state_str = translate_func("state_open", "Open")
-            else:
-                state_str = translate_func("state_closed", "Closed")
-        elif is_lock:
-            if is_active:
-                state_str = translate_func("state_unlocked", "Unlocked")
-            else:
-                state_str = translate_func("state_locked", "Locked")
-        else:
-            # Generic binary sensor or switch
-            if is_active:
-                state_str = translate_func("state_on", "On")
-            else:
-                state_str = translate_func("state_off", "Off")
-                
-    # Append unit if available and not binary/unknown
-    if unit and state_lower not in ("on", "off", "true", "false", "unknown", "unavailable"):
-        state_str = f"{state_str} {unit}".strip()
+    is_active = state_lower in ACTIVE_STATES
 
+    if domain == "lock" or device_class == "lock":  # a lock binary_sensor is on when unlocked
+        kind = "lock"
+    elif words & WASHING_WORDS:
+        kind = "washing"
+    elif domain in ("light", "switch", "media_player", "camera", "vacuum"):
+        kind = domain
+    elif domain == "cover":
+        kind = "door" if device_class in DOOR_CLASSES else "cover"
+    elif device_class == "temperature" or "°" in unit or words & {"temp", "temperature"}:
+        kind = "temperature"
+    elif device_class == "battery" or "battery" in words:
+        kind = "battery"
+    elif device_class in ("humidity", "moisture") and unit or "humidity" in words:
+        kind = "humidity"
+    elif device_class in ("power", "energy") or unit in ("W", "kW", "Wh", "kWh"):
+        kind = "power"
+    elif device_class in ("motion", "occupancy", "presence") or words & {"motion", "occupancy"}:
+        kind = "motion"
+    elif device_class in DOOR_CLASSES or words & {"door", "window", "gate", "garage"}:
+        kind = "door"
+    else:
+        kind = "other"
+
+    icon = {"lock": "unlock" if is_active else "lock", "washing": "washing-machine", "light": "lightbulb",
+            "switch": "power", "media_player": "play" if is_active else "square", "camera": "video",
+            "vacuum": "trash-2", "cover": "blinds", "temperature": "thermometer", "battery": "battery",
+            "humidity": "droplet", "power": "zap", "motion": "activity" if is_active else "eye-off",
+            "door": "door-open" if is_active else "door-closed"}.get(kind, "info")
+
+    on, off = STATE_WORDS.get(kind, STATE_WORDS["other"])
+    if state_lower in ON_OFF_STATES:
+        state_str = translate_func(*(on if is_active else off))
+    elif state_lower in OTHER_STATES:
+        state_str = translate_func(*OTHER_STATES[state_lower])
+    else:  # a reading: add its unit
+        state_str = f"{raw_state} {unit}".strip()
     return state_str, icon, is_active
 
 class HomeassistantModule:
@@ -179,7 +160,8 @@ class HomeassistantModule:
         base_url = base_url.rstrip("/")
         self.last_error = None
         raw_states = await self.fetch_states(f"{base_url}/api/states", token)
-        
+        bulk_error = self.last_error  # set only when Home Assistant didn't answer: then the card says why
+
         # Build states dictionary mapping entity_id -> state data
         states_dict = {}
         if isinstance(raw_states, list):
@@ -200,10 +182,10 @@ class HomeassistantModule:
             else:
                 # Fall back to fetching individually if the full fetch failed or didn't contain it
                 data = await self.fetch_states(f"{base_url}/api/states/{entity_id}", token)
-                if data:
+                if isinstance(data, dict):
                     states_dict[entity_id] = data
 
-            if not data:
+            if not isinstance(data, dict):
                 return {
                     "entity_id": entity_id,
                     "name": custom_name or entity_id,
@@ -219,8 +201,8 @@ class HomeassistantModule:
                     "device_class": None
                 }
                 
-            state = data.get("state", "N/A")
-            attributes = data.get("attributes", {})
+            state = str(data.get("state", "N/A"))
+            attributes = data.get("attributes") if isinstance(data.get("attributes"), dict) else {}
             friendly_name = custom_name or attributes.get("friendly_name", entity_id)
             
             # Smart state translator and icon resolver
@@ -231,7 +213,7 @@ class HomeassistantModule:
             icon = custom_icon or smart_icon
             
             # Extract common attributes using standard attributes or companion sensors
-            battery = find_companion_attribute(entity_id, states_dict, ["_battery", "_battery_level", "_power"], ["battery", "battery_level", "battery_state"])
+            battery = find_companion_attribute(entity_id, states_dict, ["_battery", "_battery_level"], ["battery", "battery_level", "battery_state"])
             humidity = find_companion_attribute(entity_id, states_dict, ["_humidity", "_relative_humidity"], ["humidity", "relative_humidity"])
             linkquality = find_companion_attribute(entity_id, states_dict, ["_linkquality", "_signal", "_signal_strength", "_rssi"], ["linkquality", "signal_strength", "rssi"])
             voltage = find_companion_attribute(entity_id, states_dict, ["_voltage"], ["voltage"])
@@ -253,14 +235,18 @@ class HomeassistantModule:
             }
 
         tasks = [resolve_one(cfg) for cfg in entity_configs]
-        return await asyncio.gather(*tasks)
+        states = await asyncio.gather(*tasks)
+        self.last_error = bulk_error
+        return states
 
     async def render(self) -> str:
         """The entities' states, grouped; the mirror shows it every interval."""
         # The schema's default is only a hint: the sandbox lets the module reach the address the owner typed
         url = (self.config.get("url") or "").strip()
         token = self.config.get("token")
-        entity_configs = self.config.get("entities", [])
+        # An empty row the form saved is skipped; an id copied with a space still matches
+        entity_configs = [{**c, "entity_id": c["entity_id"].strip()} for c in self.config.get("entities") or []
+                          if isinstance(c, dict) and isinstance(c.get("entity_id"), str) and c["entity_id"].strip()]
         heading = self.config.get("heading", "")
         show_header = self.config.get("show_header", True)
         width = self.config.get("width", "100%")
@@ -289,16 +275,20 @@ class HomeassistantModule:
             if entity_configs:
                 fetched_entities = await self.fetch_all_states(url, token, entity_configs)
             
-            all_failed = len(fetched_entities) > 0 and all(e["error"] for e in fetched_entities)
-            
+            # Home Assistant didn't answer at all: say why instead of a "Not found" row per entity
+            all_failed = bool(self.last_error) and all(e["error"] for e in fetched_entities)
+            if all_failed:
+                fetched_entities = []
+
             # Group entities dynamically by group name, preserving order of first appearance
             groups_ordered = []
             groups_map = {}
-            
-            for ent in fetched_entities:
-                cfg = next((c for c in entity_configs if c["entity_id"] == ent["entity_id"]), {})
-                group_name = cfg.get("group", "").strip()
-                layout = cfg.get("layout") or self.config.get("layout", "compact")
+
+            # gather keeps the order, so each entity has its own row's group and layout (one entity may be in two)
+            for ent, cfg in zip(fetched_entities, entity_configs):
+                group_name = (cfg.get("group") or "").strip()
+                # An entity's "" is "as the module's Layout Style", the schema's default
+                layout = cfg.get("layout") or self.config.get("layout") or "detailed"
                 
                 ent["layout"] = layout
                 
