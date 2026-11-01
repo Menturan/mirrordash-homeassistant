@@ -1,0 +1,172 @@
+[
+ {
+  "entity_id": "sensor.living_room_temperature",
+  "state": "21.4",
+  "attributes": {
+   "friendly_name": "Living room temperature",
+   "unit_of_measurement": "°C",
+   "device_class": "temperature"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.living_room_humidity",
+  "state": "41",
+  "attributes": {
+   "friendly_name": "Living room humidity",
+   "unit_of_measurement": "%",
+   "device_class": "humidity"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.outdoor_temperature",
+  "state": "4.1",
+  "attributes": {
+   "friendly_name": "Outdoor temperature",
+   "unit_of_measurement": "°C",
+   "device_class": "temperature"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.outdoor_humidity",
+  "state": "86",
+  "attributes": {
+   "friendly_name": "Outdoor humidity",
+   "unit_of_measurement": "%",
+   "device_class": "humidity"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.bedroom_temperature",
+  "state": "19.8",
+  "attributes": {
+   "friendly_name": "Bedroom temperature",
+   "unit_of_measurement": "°C",
+   "device_class": "temperature"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.bedroom_temperature_battery",
+  "state": "78",
+  "attributes": {
+   "friendly_name": "Bedroom sensor battery",
+   "unit_of_measurement": "%",
+   "device_class": "battery"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "light.kitchen",
+  "state": "on",
+  "attributes": {
+   "friendly_name": "Kitchen",
+   "brightness": 180
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "light.living_room",
+  "state": "off",
+  "attributes": {
+   "friendly_name": "Living room lamp"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "light.hallway",
+  "state": "on",
+  "attributes": {
+   "friendly_name": "Hallway"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "switch.coffee_maker",
+  "state": "off",
+  "attributes": {
+   "friendly_name": "Coffee maker"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "lock.front_door",
+  "state": "locked",
+  "attributes": {
+   "friendly_name": "Front door"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "binary_sensor.hallway_motion",
+  "state": "off",
+  "attributes": {
+   "friendly_name": "Hallway motion",
+   "device_class": "motion"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "binary_sensor.balcony_door",
+  "state": "off",
+  "attributes": {
+   "friendly_name": "Balcony door",
+   "device_class": "door"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "cover.bedroom_blinds",
+  "state": "closed",
+  "attributes": {
+   "friendly_name": "Bedroom blinds"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.washing_machine",
+  "state": "idle",
+  "attributes": {
+   "friendly_name": "Washing machine"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "sensor.house_power",
+  "state": "1240",
+  "attributes": {
+   "friendly_name": "House power",
+   "unit_of_measurement": "W",
+   "device_class": "power"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "media_player.living_room",
+  "state": "paused",
+  "attributes": {
+   "friendly_name": "Living room speaker"
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
+ }
+]

@@ -1,0 +1,7 @@
+{
+  "captured": "2026-11-02",
+  "answers": {
+    "*/api/states": "states.json",
+    "*/api/states/*": "unknown.json"
+  }
+}
