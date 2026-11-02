@@ -1,13 +1,33 @@
+{# A sensor's other readings (its humidity, battery, signal, voltage), when it has any #}
+{% macro readings(entity, row_class) -%}
+    {% set shown = [] %}
+    {% for key, icon, label_key, label, unit in [("humidity", "droplet", "humidity", "Humidity", "%"),
+                                                  ("battery", "battery", "battery", "Battery", "%"),
+                                                  ("linkquality", "wifi", "signal", "Signal", ""),
+                                                  ("voltage", "activity", "voltage", "Voltage", "V")] %}
+        {% if entity[key] is not none and entity[key] != "" %}
+            {% set _ = shown.append((icon, translations.get(label_key, label), (entity[key] ~ " " ~ unit) | trim)) %}
+        {% endif %}
+    {% endfor %}
+    {% if shown %}
+        <div class="{{ row_class }}">
+            {% for icon, label, value in shown %}
+                <span class="ha-meta"><i data-lucide="{{ icon }}"></i>{{ label }} <span class="ha-meta-value">{{ value }}</span></span>
+            {% endfor %}
+        </div>
+    {% endif %}
+{%- endmacro %}
+
 <div class="ha-container" style="width: {{ width }}; height: {{ height }};">
     {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}
-    
+
     <div class="ha-body">
         {% if error %}
             <div class="module-message"><i data-lucide="alert-circle"></i><span>{{ error }}</span></div>
         {% endif %}
-        
+
         {% if groups %}
             <div class="ha-groups">
                 {% for group in groups %}
@@ -15,95 +35,35 @@
                         {% if group.name %}
                             <div class="ha-group-title">{{ group.name }}</div>
                         {% endif %}
-                        
                         <div class="ha-group-blocks">
                             {% for block in group.blocks %}
                                 {% if block.type == "compact" %}
-                                    <!-- Layout Option A.3: Compact Vertical List -->
-                                    <div class="ha-entities ha-compact-list">
+                                    <div class="ha-compact">
                                         {% for entity in block.entities %}
+                                            {% set tone = "ha-text-error" if entity.error else "ha-text-active" if entity.is_active else "ha-text-inactive" %}
                                             <div class="ha-compact-item">
-                                                <div class="ha-compact-row">
-                                                    <span class="ha-compact-label">
-                                                        {% if entity.is_active and (entity.domain == 'binary_sensor' or entity.domain == 'switch') %}
-                                                            <span class="ha-status-pip active"></span>
-                                                        {% elif entity.domain == 'binary_sensor' or entity.domain == 'switch' %}
-                                                            <span class="ha-status-pip"></span>
-                                                        {% endif %}
-                                                        <i data-lucide="{{ entity.icon }}" class="{% if entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}"></i>
-                                                        {{ entity.name }}
+                                                <div class="ha-row">
+                                                    <span class="ha-row-name">
+                                                        <i data-lucide="{{ entity.icon }}" class="{{ 'ha-text-active' if entity.is_active else 'ha-text-inactive' }}"></i>
+                                                        <span>{{ entity.name }}</span>
                                                     </span>
-                                                    <span class="ha-compact-value {% if entity.error %}ha-text-error{% elif entity.is_active %}ha-text-active{% else %}ha-text-inactive{% endif %}">{{ entity.state }}</span>
+                                                    <span class="ha-row-value {{ tone }}">{{ entity.state }}</span>
                                                 </div>
-                                                {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
-                                                    <div class="ha-compact-metadata">
-                                                        {% if entity.humidity is not none and entity.humidity != "" %}
-                                                            <span class="ha-meta-inline"><i data-lucide="droplet"></i> {{ translations.get("humidity", "Humidity") }}: <span class="ha-meta-value">{{ entity.humidity }}%</span></span>
-                                                        {% endif %}
-                                                        {% if entity.battery is not none and entity.battery != "" %}
-                                                            <span class="ha-meta-inline"><i data-lucide="battery"></i> {{ translations.get("battery", "Battery") }}: <span class="ha-meta-value">{{ entity.battery }}%</span></span>
-                                                        {% endif %}
-                                                        {% if entity.linkquality is not none and entity.linkquality != "" %}
-                                                            <span class="ha-meta-inline"><i data-lucide="wifi"></i> {{ translations.get("signal", "Signal") }}: <span class="ha-meta-value">{{ entity.linkquality }}</span></span>
-                                                        {% endif %}
-                                                        {% if entity.voltage is not none and entity.voltage != "" %}
-                                                            <span class="ha-meta-inline"><i data-lucide="activity"></i> {{ translations.get("voltage", "Voltage") }}: <span class="ha-meta-value">{{ entity.voltage }}V</span></span>
-                                                        {% endif %}
-                                                    </div>
-                                                {% endif %}
-                                                {% if not loop.last %}
-                                                    <div class="ha-compact-separator"></div>
-                                                {% endif %}
+                                                {{ readings(entity, "ha-readings ha-readings-row") }}
                                             </div>
                                         {% endfor %}
                                     </div>
                                 {% else %}
-                                    <!-- Layout Option A.1: Detailed Sensor Cards (default) -->
-                                    <div class="ha-entities ha-detailed">
-                                        {% set entity = block.entity %}
-                                        <div class="ha-entity-detailed">
-                                            <div class="ha-card-header">
-                                                <span class="ha-title">
-                                                    <i data-lucide="{{ entity.icon }}"></i>
-                                                    {{ entity.name }}
-                                                </span>
-                                            </div>
-                                            <div class="ha-reading-row">
-                                                <span class="ha-primary-val {% if entity.error %}ha-text-error{% endif %}">{{ entity.state }}</span>
-                                            </div>
-                                            {% if entity.battery is not none and entity.battery != "" or entity.humidity is not none and entity.humidity != "" or entity.linkquality is not none and entity.linkquality != "" or entity.voltage is not none and entity.voltage != "" %}
-                                                <div class="ha-metadata-row">
-                                                    {% if entity.humidity is not none and entity.humidity != "" %}
-                                                        <div class="ha-meta-pill">
-                                                            <i data-lucide="droplet"></i>
-                                                            {{ translations.get("humidity", "Humidity") }}: <span class="ha-meta-value">{{ entity.humidity }}%</span>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if entity.battery is not none and entity.battery != "" %}
-                                                        <div class="ha-meta-pill">
-                                                            <i data-lucide="battery"></i>
-                                                            {{ translations.get("battery", "Battery") }}: <span class="ha-meta-value">{{ entity.battery }}%</span>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if entity.linkquality is not none and entity.linkquality != "" %}
-                                                        <div class="ha-meta-pill">
-                                                            <i data-lucide="wifi"></i>
-                                                            {{ translations.get("signal", "Signal") }}: <span class="ha-meta-value">{{ entity.linkquality }}</span>
-                                                        </div>
-                                                    {% endif %}
-                                                    {% if entity.voltage is not none and entity.voltage != "" %}
-                                                        <div class="ha-meta-pill">
-                                                            <i data-lucide="activity"></i>
-                                                            {{ translations.get("voltage", "Voltage") }}: <span class="ha-meta-value">{{ entity.voltage }}V</span>
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
+                                    {% set entity = block.entity %}
+                                    <div class="ha-detailed">
+                                        <div class="ha-name">
+                                            <i data-lucide="{{ entity.icon }}"></i>
+                                            <span>{{ entity.name }}</span>
                                         </div>
+                                        {# Unavailable or unknown is no reading: dimmed, not lit #}
+                                        <div class="ha-value{% if entity.error %} ha-text-error{% elif entity.raw_state in ('unavailable', 'unknown') %} ha-text-inactive{% endif %}">{{ entity.state }}</div>
+                                        {{ readings(entity, "ha-readings") }}
                                     </div>
-                                {% endif %}
-                                {% if not loop.last %}
-                                    <div class="ha-block-separator" style="height: 24px;"></div>
                                 {% endif %}
                             {% endfor %}
                         </div>
@@ -114,7 +74,8 @@
     </div>
 </div>
 
-<!-- Header and messages come from modules.css; only the entity cards' own look is here -->
+<!-- Header and messages come from modules.css; only the entities' own look is here.
+     No entrance animation: the card is drawn again every interval, and the mirror stays calm. -->
 <style>
 .ha-container {
     display: flex;
@@ -135,90 +96,92 @@
     gap: 40px;
 }
 
-.ha-group {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-
 .ha-group-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-size: 16px;
+    font-weight: 500;
     color: var(--color-standard-gray, #999999);
-    border-bottom: 1px dashed var(--color-dimmed-charcoal, #666666);
-    padding-bottom: 4px;
-    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-dimmed-charcoal, #666666);
+    padding-bottom: 6px;
+    margin-bottom: 20px;
 }
 
-/* ============================================================
-   Detailed Layout A.1 Styling
-   ============================================================ */
-.ha-detailed {
+/* One entity, detailed or a run of compact rows, after another */
+.ha-group-blocks {
     display: flex;
     flex-direction: column;
     gap: 32px;
 }
 
-.ha-entity-detailed {
+/* Detailed: the name, then its reading large, then the sensor's other readings under a line */
+.ha-detailed {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    animation: haFadeIn 0.5s ease-out;
+    gap: 10px;
+    min-width: 0;
 }
 
-.ha-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.ha-title {
-    font-size: 13px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-standard-gray, #999999);
+.ha-name,
+.ha-row-name {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    font-size: 16px;
 }
 
-.ha-reading-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-}
-
-.ha-primary-val {
-    font-size: 36px;
-    font-weight: 100;
-    color: var(--color-high-contrast, #ffffff);
-    line-height: 1.0;
-    letter-spacing: -0.02em;
-}
-
-.ha-metadata-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    border-top: 1px solid var(--color-dimmed-charcoal, #666666);
-    padding-top: 10px;
-    margin-top: 4px;
-}
-
-.ha-meta-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
+.ha-name {
     color: var(--color-standard-gray, #999999);
 }
 
-.ha-meta-pill i {
-    width: 12px;
-    height: 12px;
+.ha-name i,
+.ha-row-name i {
+    flex: none;
+    width: 16px;
+    height: 16px;
+}
+
+.ha-name span,
+.ha-row-name span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ha-value {
+    font-size: 36px;
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--color-high-contrast, #ffffff);
+}
+
+.ha-value.ha-text-error {
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.ha-readings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    border-top: 1px solid var(--color-dimmed-charcoal, #666666);
+    padding-top: 10px;
+    margin-top: 2px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.ha-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.ha-meta i {
+    width: 14px;
+    height: 14px;
     color: var(--color-dimmed-charcoal, #666666);
 }
 
@@ -226,86 +189,61 @@
     color: var(--color-high-contrast, #ffffff);
 }
 
-/* ============================================================
-   Compact Layout A.3 Styling
-   ============================================================ */
-.ha-compact-list {
+/* Compact: one line per entity, its other readings under the name, a line between entities */
+.ha-compact {
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
 .ha-compact-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    animation: haFadeIn 0.5s ease-out;
+    padding: 12px 0;
 }
 
-.ha-compact-row {
+.ha-compact-item:first-child {
+    padding-top: 0;
+}
+
+.ha-compact-item:last-child {
+    padding-bottom: 0;
+}
+
+.ha-compact-item + .ha-compact-item {
+    border-top: 1px solid rgba(102, 102, 102, 0.5);
+}
+
+.ha-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    gap: 16px;
 }
 
-.ha-compact-label {
-    font-size: 14px;
+.ha-row-name {
     font-weight: 500;
     color: var(--color-high-contrast, #ffffff);
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
-.ha-compact-value {
-    font-size: 15px;
+.ha-row-value {
+    flex: none;
+    white-space: nowrap;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--color-high-contrast, #ffffff);
 }
 
-.ha-compact-metadata {
-    display: flex;
-    gap: 16px;
-    font-size: 10px;
-    color: var(--color-standard-gray, #999999);
-    padding-left: 24px;
+.ha-readings-row {
+    border-top: 0;
+    padding: 0 0 0 24px;
+    margin: 0;
+    gap: 4px 16px;
+    font-size: 13px;
 }
 
-.ha-meta-inline {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.ha-meta-inline i {
-    width: 10px;
-    height: 10px;
-    color: var(--color-dimmed-charcoal, #666666);
-}
-
-.ha-compact-separator {
-    height: 1px;
-    background-color: var(--color-dimmed-charcoal, #666666);
-    opacity: 0.5;
-    margin-top: 12px;
-}
-
-/* Common Styles */
-.ha-status-pip {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    display: inline-block;
-    background-color: var(--color-dimmed-charcoal, #666666);
-}
-
-.ha-status-pip.active {
-    background-color: var(--color-status-online);
-}
-
-.ha-status-pip.alert {
-    background-color: var(--color-status-warning);
+.ha-readings-row .ha-meta i {
+    width: 12px;
+    height: 12px;
 }
 
 .ha-text-active {
@@ -318,10 +256,5 @@
 
 .ha-text-error {
     color: var(--color-error, #ffb4ab);
-}
-
-@keyframes haFadeIn {
-    from { opacity: 0; transform: translateY(2px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 </style>

@@ -305,8 +305,11 @@ def test_domain_and_device_class_before_name():
         ("sensor.login_attempts", "3", {}, "3", "info"),
         ("sensor.phone", "80", {"device_class": "battery", "unit_of_measurement": "%"}, "80 %", "battery"),
         ("sensor.front_door_temperature", "4", {"unit_of_measurement": "°C"}, "4 °C", "thermometer"),
+        ("sensor.ute_temperature_battery", "82", {"device_class": "battery", "unit_of_measurement": "%"}, "82 %", "battery"),
+        ("binary_sensor.temp_door", "on", {"device_class": "door"}, "Open", "door-open"),
         ("sensor.power_meter", "5", {"unit_of_measurement": None, "device_class": None}, "5", "info"),
         ("media_player.tv", "playing", {}, "Playing", "play"),
+        ("media_player.radio", "paused", {}, "Paused", "pause"),
         ("sensor.room_temp", "unavailable", {"unit_of_measurement": "°C"}, "Unavailable", "thermometer"),
     ]
     for entity_id, state, attrs, text, icon in cases:
@@ -317,13 +320,16 @@ def test_domain_and_device_class_before_name():
 async def test_companions_are_other_sensors():
     bulk = [{"entity_id": "sensor.kitchen_humidity", "state": "41", "attributes": {"unit_of_measurement": "%"}},
             {"entity_id": "sensor.heater_power", "state": "1500", "attributes": {"unit_of_measurement": "W"}},
-            {"entity_id": "switch.heater", "state": "on", "attributes": {}}]
+            {"entity_id": "switch.heater", "state": "on", "attributes": {}},
+            {"entity_id": "light.kitchen", "state": "on", "attributes": {}}]
     module = HomeassistantModule({})
     module.fetch_json = fake_ha(bulk)
-    humidity, heater = await module.fetch_all_states(
-        "http://localhost:8123", "fake_token", [{"entity_id": "sensor.kitchen_humidity"}, {"entity_id": "switch.heater"}])
+    humidity, heater, lamp = await module.fetch_all_states(
+        "http://localhost:8123", "fake_token",
+        [{"entity_id": "sensor.kitchen_humidity"}, {"entity_id": "switch.heater"}, {"entity_id": "light.kitchen"}])
     assert humidity["humidity"] is None  # not its own value again
     assert heater["battery"] is None  # a power meter is no battery
+    assert lamp["humidity"] is None  # the kitchen's humidity is no lamp's
 
 
 async def rendered(config, states=None, error=None):
@@ -360,3 +366,26 @@ async def test_a_missing_entity_is_no_connection_error():
     assert kw["groups"][0]["blocks"][0]["entity"]["error"] is True
 
 
+
+
+def test_preview_answers_by_the_entitys_type():
+    """The admin's preview knows only the entity id: an entity not in states.json gets a sample of its type
+    (core matches the fixtures' patterns in order with fnmatch on host + path, the first wins)."""
+    import fnmatch
+    from pathlib import Path
+    preview = Path(__file__).parent.parent / "mirrordash_homeassistant" / "preview"
+    answers = json.loads((preview / "fixtures.json").read_text())["answers"]
+
+    def shown(entity_id):
+        path = f"homeassistant.local:8123/api/states/{entity_id}"
+        file = next(f for pattern, f in answers.items() if fnmatch.fnmatchcase(path, pattern))
+        data = json.loads((preview / file).read_text())
+        return resolve_smart_state_and_icon(entity_id, data["state"], data["attributes"], lambda k, d: d)[:2]
+
+    assert shown("sensor.temperatursensor_ute_temperature") == ("21.4 °C", "thermometer")
+    assert shown("sensor.ute_temperature_battery") == ("82 %", "battery")
+    assert shown("sensor.bathroom_humidity") == ("45 %", "droplet")
+    assert shown("binary_sensor.fonstersensor_sovrum_opening") == ("Closed", "door-closed")
+    assert shown("binary_sensor.hall_occupancy") == ("Clear", "eye-off")
+    assert shown("light.desk") == ("On", "lightbulb")
+    assert shown("sensor.ute") == ("Unknown", "info")

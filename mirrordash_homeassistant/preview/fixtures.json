@@ -2,6 +2,23 @@
   "captured": "2026-11-02",
   "answers": {
     "*/api/states": "states.json",
+    "*/api/states/sensor.*battery*": "battery.json",
+    "*/api/states/sensor.*humidity*": "humidity.json",
+    "*/api/states/sensor.*temp*": "temperature.json",
+    "*/api/states/sensor.*power*": "power.json",
+    "*/api/states/sensor.*energy*": "power.json",
+    "*/api/states/binary_sensor.*opening*": "opening.json",
+    "*/api/states/binary_sensor.*contact*": "opening.json",
+    "*/api/states/binary_sensor.*door*": "opening.json",
+    "*/api/states/binary_sensor.*window*": "opening.json",
+    "*/api/states/binary_sensor.*motion*": "motion.json",
+    "*/api/states/binary_sensor.*occupancy*": "motion.json",
+    "*/api/states/binary_sensor.*presence*": "motion.json",
+    "*/api/states/light.*": "light.json",
+    "*/api/states/switch.*": "switch.json",
+    "*/api/states/lock.*": "lock.json",
+    "*/api/states/cover.*": "cover.json",
+    "*/api/states/media_player.*": "media.json",
     "*/api/states/*": "unknown.json"
   }
 }

@@ -48,7 +48,11 @@ def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: l
             val = find_attribute(attrs, fallback_keys)
             if val is not None and val != "":
                 return val
-                
+
+    # Another entity's reading belongs to a sensor's device: light.living_room has no sensor.living_room_humidity
+    if domain not in ("sensor", "binary_sensor"):
+        return None
+
     # 2. Try direct candidates (appending suffix to full entity name part)
     # e.g., sensor.living_room_temp_battery
     for suffix in attr_suffixes:
@@ -97,23 +101,34 @@ def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dic
         kind = domain
     elif domain == "cover":
         kind = "door" if device_class in DOOR_CLASSES else "cover"
-    elif device_class == "temperature" or "°" in unit or words & {"temp", "temperature"}:
+    elif device_class == "temperature" or "°" in unit:
         kind = "temperature"
-    elif device_class == "battery" or "battery" in words:
+    elif device_class == "battery":
         kind = "battery"
-    elif device_class in ("humidity", "moisture") and unit or "humidity" in words:
+    elif device_class in ("humidity", "moisture") and unit:
         kind = "humidity"
     elif device_class in ("power", "energy") or unit in ("W", "kW", "Wh", "kWh"):
         kind = "power"
-    elif device_class in ("motion", "occupancy", "presence") or words & {"motion", "occupancy"}:
+    elif device_class in ("motion", "occupancy", "presence"):
         kind = "motion"
-    elif device_class in DOOR_CLASSES or words & {"door", "window", "gate", "garage"}:
+    elif device_class in DOOR_CLASSES:
+        kind = "door"
+    # No device class that says: the name's words (sensor.ute_temperature_battery is a battery by its class)
+    elif words & {"temp", "temperature"}:
+        kind = "temperature"
+    elif "battery" in words:
+        kind = "battery"
+    elif "humidity" in words:
+        kind = "humidity"
+    elif words & {"motion", "occupancy"}:
+        kind = "motion"
+    elif words & {"door", "window", "gate", "garage"}:
         kind = "door"
     else:
         kind = "other"
 
     icon = {"lock": "unlock" if is_active else "lock", "washing": "washing-machine", "light": "lightbulb",
-            "switch": "power", "media_player": "play" if is_active else "square", "camera": "video",
+            "switch": "power", "media_player": "play" if is_active else "pause" if state_lower == "paused" else "square", "camera": "video",
             "vacuum": "trash-2", "cover": "blinds", "temperature": "thermometer", "battery": "battery",
             "humidity": "droplet", "power": "zap", "motion": "activity" if is_active else "eye-off",
             "door": "door-open" if is_active else "door-closed"}.get(kind, "info")

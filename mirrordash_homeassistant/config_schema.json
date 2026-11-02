@@ -77,8 +77,9 @@
           },
           "custom_icon": {
             "type": "string",
-            "title": "Custom Lucide Icon (Optional)",
-            "description": "Lucide icon name to show next to this entity (e.g., thermometer, lightbulb, home). If omitted, falls back to a default based on entity domain."
+            "format": "icon",
+            "title": "Custom Icon (Optional)",
+            "description": "Start typing to pick an icon (e.g. thermometer, lightbulb, house). Empty: one that fits the entity."
           },
           "group": {
             "type": "string",
