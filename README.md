@@ -14,7 +14,7 @@ A Home Assistant data-fetcher module for MirrorDash. It connects to a local Home
 ## Installation
 
 On the mirror's admin page, open **Modules**: the module is in the list, install it with one click.
-Or paste `git+https://github.com/Menturan/mirrordash-homeassistant.git` under **Modules → Install a Module from GitHub**.
+Or paste `git+https://github.com/Menturan/mirrordash-homeassistant.git` under **Modules → Add modules → Install from a Git URL or folder**.
 
 Developing it: `uv run pytest` runs its tests, and `uvx mirrordash-sdk validate .` checks it.
 
