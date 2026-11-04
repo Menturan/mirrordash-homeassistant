@@ -17,6 +17,13 @@ STATE_WORDS = {
     "cover": (("state_open", "Open"), ("state_closed", "Closed")),
     "other": (("state_on", "On"), ("state_off", "Off")),
 }
+# A sensor's other readings, each row picks which: key -> (companion sensor suffixes, own attribute keys)
+READINGS = {
+    "humidity": (["_humidity", "_relative_humidity"], ["humidity", "relative_humidity"]),
+    "battery": (["_battery", "_battery_level"], ["battery", "battery_level", "battery_state"]),
+    "linkquality": (["_linkquality", "_signal", "_signal_strength", "_rssi"], ["linkquality", "signal_strength", "rssi"]),
+    "voltage": (["_voltage"], ["voltage"]),
+}
 OTHER_STATES = {"unavailable": ("state_unavailable", "Unavailable"), "unknown": ("state_unknown", "Unknown"),
                 "playing": ("state_playing", "Playing"), "paused": ("state_paused", "Paused")}
 
@@ -208,10 +215,7 @@ class HomeassistantModule:
                     "icon": custom_icon or "alert-circle",
                     "is_active": False,
                     "error": True,
-                    "battery": None,
-                    "humidity": None,
-                    "linkquality": None,
-                    "voltage": None,
+                    **dict.fromkeys(READINGS),
                     "domain": entity_id.split(".")[0],
                     "device_class": None
                 }
@@ -227,11 +231,12 @@ class HomeassistantModule:
             
             icon = custom_icon or smart_icon
             
-            # Extract common attributes using standard attributes or companion sensors
-            battery = find_companion_attribute(entity_id, states_dict, ["_battery", "_battery_level"], ["battery", "battery_level", "battery_state"])
-            humidity = find_companion_attribute(entity_id, states_dict, ["_humidity", "_relative_humidity"], ["humidity", "relative_humidity"])
-            linkquality = find_companion_attribute(entity_id, states_dict, ["_linkquality", "_signal", "_signal_strength", "_rssi"], ["linkquality", "signal_strength", "rssi"])
-            voltage = find_companion_attribute(entity_id, states_dict, ["_voltage"], ["voltage"])
+            # The readings the row ticked, from the entity's attributes or companion sensors; a row saved
+            # before the choice existed has none saved and shows them all, as it did
+            wanted = entity_config.get("readings")
+            wanted = wanted if isinstance(wanted, list) else READINGS
+            readings = {key: find_companion_attribute(entity_id, states_dict, *lookup) if key in wanted else None
+                        for key, lookup in READINGS.items()}
             
             return {
                 "entity_id": entity_id,
@@ -241,10 +246,7 @@ class HomeassistantModule:
                 "icon": icon,
                 "is_active": is_active,
                 "error": False,
-                "battery": battery,
-                "humidity": humidity,
-                "linkquality": linkquality,
-                "voltage": voltage,
+                **readings,
                 "domain": entity_id.split(".")[0],
                 "device_class": attributes.get("device_class")
             }

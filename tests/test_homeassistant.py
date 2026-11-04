@@ -389,3 +389,16 @@ def test_preview_answers_by_the_entitys_type():
     assert shown("binary_sensor.hall_occupancy") == ("Clear", "eye-off")
     assert shown("light.desk") == ("On", "lightbulb")
     assert shown("sensor.ute") == ("Unknown", "info")
+
+
+@pytest.mark.asyncio
+async def test_each_row_picks_its_readings():
+    """A row shows only the readings it ticked; none ticked shows none; a row saved before the choice shows all."""
+    temp = {**TEMP, "attributes": {**TEMP["attributes"], "humidity": 40, "battery": 88}}
+    kw = await rendered({"entities": [
+        {"entity_id": "sensor.living_room_temp", "group": "A", "readings": ["humidity"]},
+        {"entity_id": "sensor.living_room_temp", "group": "B", "readings": []},
+        {"entity_id": "sensor.living_room_temp", "group": "C"},
+    ]}, [temp])
+    shown = [{k: g["blocks"][0]["entity"][k] for k in ("humidity", "battery")} for g in kw["groups"]]
+    assert shown == [{"humidity": 40, "battery": None}, {"humidity": None, "battery": None}, {"humidity": 40, "battery": 88}]

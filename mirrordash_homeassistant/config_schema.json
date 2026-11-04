@@ -86,6 +86,17 @@
             "title": "Group Name (Optional)",
             "description": "Optional name to group this entity under (e.g., 'Climate', 'Security')."
           },
+          "readings": {
+            "type": "array",
+            "title": "Extra Readings",
+            "description": "The sensor's other readings shown under its value, when it has them.",
+            "default": ["humidity", "battery", "linkquality", "voltage"],
+            "items": {
+              "type": "string",
+              "enum": ["humidity", "battery", "linkquality", "voltage"],
+              "enum_titles": ["Humidity", "Battery", "Signal", "Voltage"]
+            }
+          },
           "layout": {
             "type": "string",
             "default": "",
