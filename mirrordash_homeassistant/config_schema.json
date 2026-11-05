@@ -4,12 +4,6 @@
   "description": "Shows the state of lights, sensors and other devices from your Home Assistant.",
   "type": "object",
   "properties": {
-    "interval": {
-      "type": "integer",
-      "default": 30,
-      "title": "Update Interval (Seconds)",
-      "description": "Time to wait between state updates."
-    },
     "url": {
       "type": "string",
       "default": "http://homeassistant.local:8123",
@@ -35,25 +29,10 @@
       "title": "Show Header",
       "description": "Show or hide the module's header/title."
     },
-    "width": {
-      "type": "string",
-      "default": "100%",
-      "title": "Width",
-      "description": "CSS width of the module container (e.g., 380px, 100%, 30rem)."
-    },
-    "height": {
-      "type": "string",
-      "default": "auto",
-      "title": "Height",
-      "description": "CSS height of the module container (e.g., auto, 300px, 100%)."
-    },
     "layout": {
       "type": "string",
       "default": "detailed",
-      "enum": [
-        "detailed",
-        "compact"
-      ],
+      "enum": ["detailed", "compact"],
       "title": "Layout Style",
       "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata)."
     },
@@ -100,28 +79,36 @@
           "layout": {
             "type": "string",
             "default": "",
-            "enum": [
-              "",
-              "detailed",
-              "compact"
-            ],
-            "enum_titles": [
-              "As the module",
-              "Detailed",
-              "Compact"
-            ],
+            "enum": ["", "detailed", "compact"],
+            "enum_titles": ["As the module", "Detailed", "Compact"],
             "title": "Layout Style",
             "description": "Visual presentation: as the module's Layout Style, 'detailed' (large single value) or 'compact' (dense list row)."
           }
         },
-        "required": [
-          "entity_id"
-        ]
+        "required": ["entity_id"]
       }
+    },
+    "width": {
+      "type": "string",
+      "default": "100%",
+      "title": "Width",
+      "description": "CSS width of the module container (e.g., 380px, 100%, 30rem).",
+      "group": "Size"
+    },
+    "height": {
+      "type": "string",
+      "default": "auto",
+      "title": "Height",
+      "description": "CSS height of the module container (e.g., auto, 300px, 100%).",
+      "group": "Size"
+    },
+    "interval": {
+      "type": "integer",
+      "default": 30,
+      "title": "Update Interval (Seconds)",
+      "description": "Time to wait between state updates.",
+      "group": "Advanced"
     }
   },
-  "required": [
-    "interval",
-    "url"
-  ]
+  "required": ["interval", "url"]
 }
