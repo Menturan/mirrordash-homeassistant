@@ -15,7 +15,8 @@
       "type": "string",
       "title": "Long-Lived Access Token",
       "description": "Long-Lived Access Token created in your Home Assistant profile settings.",
-      "format": "password"
+      "format": "password",
+      "default": ""
     },
     "heading": {
       "type": "string",
@@ -34,7 +35,8 @@
       "default": "detailed",
       "enum": ["detailed", "compact"],
       "title": "Layout Style",
-      "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata)."
+      "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata).",
+      "enum_titles": ["Detailed", "Compact"]
     },
     "entities": {
       "type": "array",
