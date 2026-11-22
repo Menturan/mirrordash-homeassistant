@@ -6,10 +6,15 @@ A Home Assistant data-fetcher module for MirrorDash. It connects to a local Home
 - **Concurrent API Fetching**: Retrieves state data for all configured entities in parallel to ensure extremely fast refreshes.
 - **Multiple Layout Options**: Choose between `"detailed"` (large primary reading and nested metadata footer) and `"compact"` (dense vertical layout with inline metadata).
 - **Group Entities & Mix layouts**: Group your entities into custom categories/sections. Each entity follows the module's Layout Style unless you pick `"detailed"` or `"compact"` for it.
-- **Nested Telemetry Extraction**: Finds each entity's battery, humidity, signal strength and voltage (its own attributes or a companion sensor); tick under **Extra Readings** which of them each entity shows (MirrorDash 0.13 or newer).
+- **Extra Readings**: each entity lists its other readings in the form (its numeric attributes and the sensors on the same Home Assistant device: battery, humidity, signal, pressure, ...). Tick which ones show under its value; a new entity has them all ticked. Needs MirrorDash 0.19 or newer.
 - **Default Icon Resolution**: Automatically resolves default Lucide icons based on entity domain and unit type (e.g. thermometer for temperature, droplet for humidity, lightbulb for lights) if no custom icon is specified.
 - **Responsive Layout**: Adjusts layout alignment (left/right snapping) dynamically based on the mirror region it is placed in, and scales cleanly without fixed pixel widths.
 - **Connection Error Warning**: Gracefully handles unreachable instances or authorization errors.
+
+## Settings
+
+- **Home Assistant URL** and **Access Token** are shared: type them once, every Home Assistant card uses them. Each card can switch on **Own value** to use another Home Assistant.
+- **Extra Readings** (per entity) are ticked in the form, found by asking Home Assistant. Rows saved with the old Extra Readings list show none until ticked again.
 
 ## Installation
 

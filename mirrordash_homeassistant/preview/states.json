@@ -5,7 +5,8 @@
   "attributes": {
    "friendly_name": "Living room temperature",
    "unit_of_measurement": "°C",
-   "device_class": "temperature"
+   "device_class": "temperature",
+   "relative_pressure": 1013
   },
   "last_changed": "2026-11-02T07:12:00+00:00",
   "last_updated": "2026-11-02T07:12:00+00:00"

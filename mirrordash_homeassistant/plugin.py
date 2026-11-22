@@ -2,6 +2,9 @@ import asyncio
 import logging
 import re
 
+from .companions import DeviceMap, fetch_companions
+from .readings import entity_readings, shown_readings
+
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
 
 ACTIVE_STATES = {"on", "true", "detected", "running", "open", "unlocked", "playing"}
@@ -17,78 +20,8 @@ STATE_WORDS = {
     "cover": (("state_open", "Open"), ("state_closed", "Closed")),
     "other": (("state_on", "On"), ("state_off", "Off")),
 }
-# A sensor's other readings, each row picks which: key -> (companion sensor suffixes, own attribute keys)
-READINGS = {
-    "humidity": (["_humidity", "_relative_humidity"], ["humidity", "relative_humidity"]),
-    "battery": (["_battery", "_battery_level"], ["battery", "battery_level", "battery_state"]),
-    "linkquality": (["_linkquality", "_signal", "_signal_strength", "_rssi"], ["linkquality", "signal_strength", "rssi"]),
-    "voltage": (["_voltage"], ["voltage"]),
-}
 OTHER_STATES = {"unavailable": ("state_unavailable", "Unavailable"), "unknown": ("state_unknown", "Unknown"),
                 "playing": ("state_playing", "Playing"), "paused": ("state_paused", "Paused")}
-
-def find_attribute(attributes: dict, keys: list[str]) -> any:
-    """Finds an attribute value case-insensitively from a list of possible keys."""
-    if not attributes:
-        return None
-    norm_attrs = {k.lower().replace(" ", "_").replace("-", "_"): v for k, v in attributes.items()}
-    for key in keys:
-        norm_key = key.lower().replace(" ", "_").replace("-", "_")
-        if norm_key in norm_attrs:
-            return norm_attrs[norm_key]
-    return None
-
-def find_companion_attribute(entity_id: str, states_dict: dict, attr_suffixes: list[str], fallback_keys: list[str] = None) -> any:
-    """
-    Finds a companion sensor value (like battery, humidity) for a given entity.
-    """
-    parts = entity_id.split(".")
-    if len(parts) != 2:
-        return None
-    domain, name = parts
-    
-    # 1. Look in entity's own attributes first
-    entity_data = states_dict.get(entity_id)
-    if entity_data:
-        attrs = entity_data.get("attributes", {})
-        if fallback_keys:
-            val = find_attribute(attrs, fallback_keys)
-            if val is not None and val != "":
-                return val
-
-    # Another entity's reading belongs to a sensor's device: light.living_room has no sensor.living_room_humidity
-    if domain not in ("sensor", "binary_sensor"):
-        return None
-
-    # 2. Try direct candidates (appending suffix to full entity name part)
-    # e.g., sensor.living_room_temp_battery
-    for suffix in attr_suffixes:
-        cand = f"sensor.{name}{suffix}"
-        if cand in states_dict:
-            val = states_dict[cand].get("state")
-            if val and val not in ("unknown", "unavailable"):
-                return val
-                
-    # 3. Strip common sensor suffixes from the base name, then append
-    suffixes_to_strip = [
-        "_temp", "_temperature", "_humidity", "_sensor", "_multisensor",
-        "_climate", "_motion", "_door", "_window", "_lock"
-    ]
-    base_name = name
-    for suf in suffixes_to_strip:
-        if base_name.endswith(suf):
-            base_name = base_name[:-len(suf)]
-            break
-            
-    if base_name != name:
-        for suffix in attr_suffixes:
-            cand = f"sensor.{base_name}{suffix}"
-            if cand in states_dict and cand != entity_id:  # a humidity sensor is not its own companion
-                val = states_dict[cand].get("state")
-                if val and val not in ("unknown", "unavailable"):
-                    return val
-                    
-    return None
 
 def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dict, translate_func) -> tuple[str, str, bool]:
     """(state text, Lucide icon, active) from the entity's domain and device class first; its name is
@@ -149,6 +82,13 @@ def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dic
         state_str = f"{raw_state} {unit}".strip()
     return state_str, icon, is_active
 
+def ticked_readings(entity_config: dict) -> list[str]:
+    """The keys the row ticked under Extra Readings (extras.shown); none when it never ticked any."""
+    extras = entity_config.get("extras")
+    shown = extras.get("shown") if isinstance(extras, dict) else None
+    return [key for key in shown if isinstance(key, str)] if isinstance(shown, list) else []
+
+
 class HomeassistantModule:
     def __init__(self, config):
         self.config = config
@@ -156,6 +96,7 @@ class HomeassistantModule:
         self.interval = config.get("interval", 30)
         self.translations = config.get("translations", {})
         self.last_error = None  # fetch_json's error from the last update, e.g. "rejected"
+        self.device_map = DeviceMap()  # which sensors share an entity's device, kept for an hour
 
         logger.info(f"Initializing {self.name} module")
 
@@ -193,6 +134,14 @@ class HomeassistantModule:
                     if eid:
                         states_dict[eid] = s
                     
+        # Only rows that ticked an extra reading need to know their device's sensors: one call for all of them
+        wanting = list(dict.fromkeys(c["entity_id"] for c in entity_configs if ticked_readings(c)))
+        companions = {}
+        if wanting and states_dict:
+            async def ask(ids):
+                return await fetch_companions(self.fetch, base_url, token, ids)
+            companions = await self.device_map.lookup(wanting, ask)
+
         async def resolve_one(entity_config):
             entity_id = entity_config["entity_id"]
             custom_name = entity_config.get("custom_name")
@@ -215,7 +164,7 @@ class HomeassistantModule:
                     "icon": custom_icon or "alert-circle",
                     "is_active": False,
                     "error": True,
-                    **dict.fromkeys(READINGS),
+                    "readings": [],
                     "domain": entity_id.split(".")[0],
                     "device_class": None
                 }
@@ -231,13 +180,11 @@ class HomeassistantModule:
             
             icon = custom_icon or smart_icon
             
-            # The readings the row ticked, from the entity's attributes or companion sensors; a row saved
-            # before the choice existed has none saved and shows them all, as it did
-            wanted = entity_config.get("readings")
-            wanted = wanted if isinstance(wanted, list) else READINGS
-            readings = {key: find_companion_attribute(entity_id, states_dict, *lookup) if key in wanted else None
-                        for key, lookup in READINGS.items()}
-            
+            ticked = ticked_readings(entity_config)  # this row's own ticks: one entity may be in two rows
+            readings = shown_readings(
+                entity_readings(entity_id, states_dict, companions.get(entity_id, [])) if ticked else {},
+                ticked, self.translate)
+
             return {
                 "entity_id": entity_id,
                 "name": friendly_name,
@@ -246,7 +193,7 @@ class HomeassistantModule:
                 "icon": icon,
                 "is_active": is_active,
                 "error": False,
-                **readings,
+                "readings": readings,
                 "domain": entity_id.split(".")[0],
                 "device_class": attributes.get("device_class")
             }
@@ -375,3 +322,28 @@ class HomeassistantModule:
             )
 
         return html
+
+    async def settings_fields_extras(self, item):
+        """Extra Readings in the form: the readings the row's entity has, as boxes, all ticked for a new row."""
+        entity_id = (item.get("entity_id") or "").strip()
+        if not entity_id:
+            raise ValueError("Enter the entity ID first")
+        url = (self.config.get("url") or "").strip().rstrip("/")
+        token = self.config.get("token")
+        if not token:
+            raise ValueError("Enter the access token first")
+        self.last_error = None
+        raw_states = await self.fetch_states(f"{url}/api/states", token) if url else None
+        if not isinstance(raw_states, list):
+            raise ValueError(f"Couldn't reach Home Assistant ({self.last_error or 'no address'})")
+        states = {s["entity_id"]: s for s in raw_states if isinstance(s, dict) and s.get("entity_id")}
+        if entity_id not in states:
+            raise ValueError(f"Home Assistant has no {entity_id}")
+        companions = await fetch_companions(self.fetch, url, token, [entity_id]) or {}
+        found = entity_readings(entity_id, states, companions.get(entity_id, []))
+        if not found:
+            return {}
+        keys = sorted(found, key=lambda k: (found[k]["label"].lower(), k))
+        titles = [f"{found[k]['label']} ({found[k]['value']} {found[k]['unit']})".replace(" )", ")") for k in keys]
+        return {"shown": {"type": "array", "title": "Show", "default": keys,
+                          "items": {"type": "string", "enum": keys, "enum_titles": titles}}}

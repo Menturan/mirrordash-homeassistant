@@ -246,51 +246,7 @@ async def test_render_with_groups():
     entity = block["entity"]
     assert entity["entity_id"] == "sensor.living_room_temp"
     assert entity["state"] == "22.4 °C"
-    assert entity["battery"] == 88
-
-@pytest.mark.asyncio
-async def test_companion_attribute_lookup():
-    bulk = [
-        {
-            "entity_id": "sensor.living_room_temp",
-            "state": "22.4",
-            "attributes": {
-                "friendly_name": "Living Room Temp",
-                "unit_of_measurement": "°C"
-            }
-        },
-        {
-            "entity_id": "sensor.living_room_battery",
-            "state": "75",
-            "attributes": {
-                "friendly_name": "Living Room Battery",
-                "unit_of_measurement": "%",
-                "device_class": "battery"
-            }
-        }
-    ]
-
-    config = {
-        "url": "http://localhost:8123",
-        "token": "fake_token",
-        "entities": [
-            {
-                "entity_id": "sensor.living_room_temp",
-                "layout": "detailed"
-            }
-        ]
-    }
-    module = HomeassistantModule(config)
-    module.fetch_json = fake_ha(bulk)
-
-    # Run fetch_all_states
-    states = await module.fetch_all_states("http://localhost:8123", "fake_token", config["entities"])
-    
-    assert len(states) == 1
-    entity = states[0]
-    assert entity["entity_id"] == "sensor.living_room_temp"
-    assert entity["battery"] == "75"
-
+    assert entity["readings"] == []  # none ticked
 
 def test_domain_and_device_class_before_name():
     """The name is a hint by whole words: light.outdoor is no door, switch.alarm_clock no lock."""
@@ -314,22 +270,6 @@ def test_domain_and_device_class_before_name():
     ]
     for entity_id, state, attrs, text, icon in cases:
         assert resolve_smart_state_and_icon(entity_id, state, attrs, english)[:2] == (text, icon), entity_id
-
-
-@pytest.mark.asyncio
-async def test_companions_are_other_sensors():
-    bulk = [{"entity_id": "sensor.kitchen_humidity", "state": "41", "attributes": {"unit_of_measurement": "%"}},
-            {"entity_id": "sensor.heater_power", "state": "1500", "attributes": {"unit_of_measurement": "W"}},
-            {"entity_id": "switch.heater", "state": "on", "attributes": {}},
-            {"entity_id": "light.kitchen", "state": "on", "attributes": {}}]
-    module = HomeassistantModule({})
-    module.fetch_json = fake_ha(bulk)
-    humidity, heater, lamp = await module.fetch_all_states(
-        "http://localhost:8123", "fake_token",
-        [{"entity_id": "sensor.kitchen_humidity"}, {"entity_id": "switch.heater"}, {"entity_id": "light.kitchen"}])
-    assert humidity["humidity"] is None  # not its own value again
-    assert heater["battery"] is None  # a power meter is no battery
-    assert lamp["humidity"] is None  # the kitchen's humidity is no lamp's
 
 
 async def rendered(config, states=None, error=None):
@@ -389,16 +329,3 @@ def test_preview_answers_by_the_entitys_type():
     assert shown("binary_sensor.hall_occupancy") == ("Clear", "eye-off")
     assert shown("light.desk") == ("On", "lightbulb")
     assert shown("sensor.ute") == ("Unknown", "info")
-
-
-@pytest.mark.asyncio
-async def test_each_row_picks_its_readings():
-    """A row shows only the readings it ticked; none ticked shows none; a row saved before the choice shows all."""
-    temp = {**TEMP, "attributes": {**TEMP["attributes"], "humidity": 40, "battery": 88}}
-    kw = await rendered({"entities": [
-        {"entity_id": "sensor.living_room_temp", "group": "A", "readings": ["humidity"]},
-        {"entity_id": "sensor.living_room_temp", "group": "B", "readings": []},
-        {"entity_id": "sensor.living_room_temp", "group": "C"},
-    ]}, [temp])
-    shown = [{k: g["blocks"][0]["entity"][k] for k in ("humidity", "battery")} for g in kw["groups"]]
-    assert shown == [{"humidity": 40, "battery": None}, {"humidity": None, "battery": None}, {"humidity": 40, "battery": 88}]

@@ -9,14 +9,16 @@
       "default": "http://homeassistant.local:8123",
       "title": "Home Assistant URL",
       "description": "The base URL of your local Home Assistant instance.",
-      "format": "lan-url"
+      "format": "lan-url",
+      "shared": true
     },
     "token": {
       "type": "string",
       "title": "Long-Lived Access Token",
       "description": "Long-Lived Access Token created in your Home Assistant profile settings.",
       "format": "password",
-      "default": ""
+      "default": "",
+      "shared": true
     },
     "heading": {
       "type": "string",
@@ -67,16 +69,11 @@
             "title": "Group Name (Optional)",
             "description": "Optional name to group this entity under (e.g., 'Climate', 'Security')."
           },
-          "readings": {
-            "type": "array",
+          "extras": {
+            "type": "object",
+            "format": "fields",
             "title": "Extra Readings",
-            "description": "The sensor's other readings shown under its value, when it has them.",
-            "default": ["humidity", "battery", "linkquality", "voltage"],
-            "items": {
-              "type": "string",
-              "enum": ["humidity", "battery", "linkquality", "voltage"],
-              "enum_titles": ["Humidity", "Battery", "Signal", "Voltage"]
-            }
+            "description": "The entity's other readings, ticked to be shown under its value."
           },
           "layout": {
             "type": "string",

@@ -18,7 +18,11 @@ mirrordash_homeassistant = "mirrordash_homeassistant.plugin:HomeassistantModule"
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "jinja2>=3.1",  # the mirror's own, to draw the template in the tests
 ]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 requires = ["hatchling"]

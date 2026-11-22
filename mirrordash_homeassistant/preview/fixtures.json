@@ -1,6 +1,7 @@
 {
   "captured": "2026-11-02",
   "answers": {
+    "*/api/template": "template.json",
     "*/api/states": "states.json",
     "*/api/states/sensor.*battery*": "battery.json",
     "*/api/states/sensor.*humidity*": "humidity.json",

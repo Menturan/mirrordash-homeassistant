@@ -1,18 +1,10 @@
 {# A sensor's other readings (its humidity, battery, signal, voltage), when it has any #}
+{# An entity's extra readings (the ones its row ticked): entity.readings is [{key, value, unit, label, icon}] #}
 {% macro readings(entity, row_class) -%}
-    {% set shown = [] %}
-    {% for key, icon, label_key, label, unit in [("humidity", "droplet", "humidity", "Humidity", "%"),
-                                                  ("battery", "battery", "battery", "Battery", "%"),
-                                                  ("linkquality", "wifi", "signal", "Signal", ""),
-                                                  ("voltage", "activity", "voltage", "Voltage", "V")] %}
-        {% if entity[key] is not none and entity[key] != "" %}
-            {% set _ = shown.append((icon, translations.get(label_key, label), (entity[key] ~ " " ~ unit) | trim)) %}
-        {% endif %}
-    {% endfor %}
-    {% if shown %}
+    {% if entity.readings %}
         <div class="{{ row_class }}">
-            {% for icon, label, value in shown %}
-                <span class="ha-meta"><i data-lucide="{{ icon }}"></i>{{ label }} <span class="ha-meta-value">{{ value }}</span></span>
+            {% for reading in entity.readings %}
+                <span class="ha-meta"><i data-lucide="{{ reading.icon }}"></i>{{ reading.label }} <span class="ha-meta-value">{{ (reading.value ~ " " ~ reading.unit) | trim }}</span></span>
             {% endfor %}
         </div>
     {% endif %}

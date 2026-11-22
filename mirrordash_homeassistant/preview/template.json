@@ -1,0 +1,16 @@
+[
+ {
+  "entity_id": "sensor.living_room_temperature",
+  "device_entities": [
+   "sensor.living_room_temperature",
+   "sensor.living_room_humidity"
+  ]
+ },
+ {
+  "entity_id": "sensor.bedroom_temperature",
+  "device_entities": [
+   "sensor.bedroom_temperature",
+   "sensor.bedroom_temperature_battery"
+  ]
+ }
+]
