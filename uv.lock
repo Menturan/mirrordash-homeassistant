@@ -112,7 +112,7 @@ wheels = [
 
 [[package]]
 name = "mirrordash-homeassistant"
-version = "1.7.0"
+version = "1.7.1"
 source = { editable = "." }
 
 [package.dev-dependencies]
