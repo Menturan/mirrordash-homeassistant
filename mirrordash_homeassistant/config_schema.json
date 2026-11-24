@@ -81,6 +81,7 @@
             "default": false,
             "title": "Share with Other Modules",
             "description": "Send this entity's value to other modules, e.g. Weather's outdoor temperature.",
+            "copy_value": "mirrordash_homeassistant.{entity_id}",
             "help": "Every update sends the public event mirrordash_homeassistant.<entity id> (e.g. mirrordash_homeassistant.sensor.outdoor_temperature). A sensor with a number sends {\"value\": 3.4, \"unit\": \"°C\", \"name\": ..., \"kind\": ...}, anything else {\"state\": \"on\", \"name\": ..., \"kind\": ...}. Any module can listen."
           },
           "extras": {
