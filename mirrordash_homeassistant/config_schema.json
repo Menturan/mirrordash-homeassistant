@@ -70,6 +70,18 @@
             "title": "Group Name (Optional)",
             "description": "Optional name to group this entity under (e.g., 'Climate', 'Security')."
           },
+          "show": {
+            "type": "boolean",
+            "default": true,
+            "title": "Show on the Mirror",
+            "description": "Show this entity in the card. Untick to keep it only for sharing with other modules."
+          },
+          "share": {
+            "type": "boolean",
+            "default": false,
+            "title": "Share with Other Modules",
+            "description": "Every update sends the public event mirrordash_homeassistant.<entity id> (e.g. mirrordash_homeassistant.sensor.outdoor_temperature). A sensor with a number sends {\"value\": 3.4, \"unit\": \"°C\", \"name\": ..., \"kind\": ...}, anything else {\"state\": \"on\", \"name\": ..., \"kind\": ...}. Any module can listen, e.g. Weather's outdoor temperature."
+          },
           "extras": {
             "type": "object",
             "format": "fields",

@@ -4,6 +4,7 @@ import re
 
 from .companions import DeviceMap, fetch_companions
 from .readings import entity_readings, shown_readings
+from .sharing import share_entities
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
 
@@ -23,15 +24,13 @@ STATE_WORDS = {
 OTHER_STATES = {"unavailable": ("state_unavailable", "Unavailable"), "unknown": ("state_unknown", "Unknown"),
                 "playing": ("state_playing", "Playing"), "paused": ("state_paused", "Paused")}
 
-def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dict, translate_func) -> tuple[str, str, bool]:
-    """(state text, Lucide icon, active) from the entity's domain and device class first; its name is
-    only a hint, matched by whole words (light.outdoor is no door, switch.alarm_clock no lock)."""
+def entity_kind(entity_id: str, attributes: dict) -> str:
+    """What the entity is ("lock", "temperature", "door", ... or "other"), from its domain and device class
+    first; its name is only a hint, matched by whole words (light.outdoor is no door, switch.alarm_clock no lock)."""
     domain = entity_id.split(".")[0]
     device_class = attributes.get("device_class") or ""  # HA may send null
     unit = attributes.get("unit_of_measurement") or ""
     words = set(re.split(r"[^a-zåäö0-9]+", entity_id.lower().split(".", 1)[-1]))
-    state_lower = raw_state.lower()
-    is_active = state_lower in ACTIVE_STATES
 
     if domain == "lock" or device_class == "lock":  # a lock binary_sensor is on when unlocked
         kind = "lock"
@@ -66,6 +65,15 @@ def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dic
         kind = "door"
     else:
         kind = "other"
+    return kind
+
+
+def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dict, translate_func) -> tuple[str, str, bool]:
+    """(state text, Lucide icon, active) from the entity's kind."""
+    unit = attributes.get("unit_of_measurement") or ""
+    kind = entity_kind(entity_id, attributes)
+    state_lower = raw_state.lower()
+    is_active = state_lower in ACTIVE_STATES
 
     icon = {"lock": "unlock" if is_active else "lock", "washing": "washing-machine", "light": "lightbulb",
             "switch": "power", "media_player": "play" if is_active else "pause" if state_lower == "paused" else "square", "camera": "video",
@@ -87,6 +95,11 @@ def ticked_readings(entity_config: dict) -> list[str]:
     extras = entity_config.get("extras")
     shown = extras.get("shown") if isinstance(extras, dict) else None
     return [key for key in shown if isinstance(key, str)] if isinstance(shown, list) else []
+
+
+def is_shown(entity_config: dict) -> bool:
+    """Whether the row is drawn on the mirror; a row saved before the setting existed is."""
+    return entity_config.get("show", True) is not False
 
 
 class HomeassistantModule:
@@ -195,13 +208,23 @@ class HomeassistantModule:
                 "error": False,
                 "readings": readings,
                 "domain": entity_id.split(".")[0],
-                "device_class": attributes.get("device_class")
+                "device_class": attributes.get("device_class"),
+                "unit": attributes.get("unit_of_measurement") or "",
+                "kind": entity_kind(entity_id, attributes)  # what other modules get told it is
             }
 
         tasks = [resolve_one(cfg) for cfg in entity_configs]
         states = await asyncio.gather(*tasks)
         self.last_error = bulk_error
         return states
+
+    async def share_fetched(self, entities: list[dict], entity_configs: list[dict]) -> None:
+        """Send the shared entities' states to other modules; never from the admin page's preview."""
+        event_bus = self.config.get("event_bus")  # not there in a test
+        if not event_bus or self.config.get("preview"):
+            return
+        shared = {ent["entity_id"]: ent for ent, cfg in zip(entities, entity_configs) if cfg.get("share")}  # once per id
+        await share_entities(event_bus, list(shared.values()))
 
     async def render(self) -> str:
         """The entities' states, grouped; the mirror shows it every interval."""
@@ -233,16 +256,28 @@ class HomeassistantModule:
             )
             return html
 
+        # An entity that is neither shown nor shared has no use for its state
+        entity_configs = [c for c in entity_configs if is_shown(c) or c.get("share")]
+        if not entity_configs:
+            return ""  # all hidden and unshared: nothing to fetch, nothing to draw
+        nothing_to_draw = not any(is_shown(c) for c in entity_configs)
+
         # Fetch entity states
         try:
-            fetched_entities = []
-            if entity_configs:
-                fetched_entities = await self.fetch_all_states(url, token, entity_configs)
-            
+            fetched_entities = await self.fetch_all_states(url, token, entity_configs)
+
             # Home Assistant didn't answer at all: say why instead of a "Not found" row per entity
             all_failed = bool(self.last_error) and all(e["error"] for e in fetched_entities)
             if all_failed:
                 fetched_entities = []
+
+            await self.share_fetched(fetched_entities, entity_configs)
+            if nothing_to_draw:
+                return ""  # an empty answer hides the card: nothing here is for the mirror
+
+            # Hidden entities were fetched only to be shared: they are not drawn
+            drawn = [(ent, cfg) for ent, cfg in zip(fetched_entities, entity_configs) if is_shown(cfg)]
+            fetched_entities, entity_configs = [d[0] for d in drawn], [d[1] for d in drawn]
 
             # Group entities dynamically by group name, preserving order of first appearance
             groups_ordered = []
@@ -311,6 +346,8 @@ class HomeassistantModule:
             )
         except Exception as fetch_err:
             logger.error(f"Error fetching states: {fetch_err}")
+            if nothing_to_draw:
+                return ""
             html = self.render_template(
                 "widget.html",
                 groups=[],

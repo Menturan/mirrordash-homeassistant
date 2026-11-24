@@ -16,6 +16,27 @@ A Home Assistant data-fetcher module for MirrorDash. It connects to a local Home
 - **Home Assistant URL** and **Access Token** are shared: type them once, every Home Assistant card uses them. Each card can switch on **Own value** to use another Home Assistant.
 - **Extra Readings** (per entity) are ticked in the form, found by asking Home Assistant. Rows saved with the old Extra Readings list show none until ticked again.
 
+## Sharing readings with other modules
+
+Two checkboxes per entity:
+
+- **Show on the Mirror** (default on): untick to keep the entity out of the card. If no entity is left to draw, the card is hidden.
+- **Share with Other Modules** (default off): every update (each Update Interval, 30 seconds by default) sends the public event `mirrordash_homeassistant.<entity id>`, for example `mirrordash_homeassistant.sensor.outdoor_temperature`. An entity that is neither shown nor shared isn't fetched at all.
+
+A sensor with a number sends:
+
+```json
+{"value": 3.4, "unit": "°C", "name": "Outdoor temperature", "kind": "temperature"}
+```
+
+Anything else (on/off, open, unavailable, ...) sends:
+
+```json
+{"state": "on", "name": "Front door", "kind": "door"}
+```
+
+`name` is the custom name, else Home Assistant's friendly name, else the entity ID. `kind` is what the module takes the entity to be (`temperature`, `humidity`, `door`, `other`, ...). Any module can subscribe to the event, for example Weather's outdoor temperature. Nothing is sent from the admin page's preview, and an entity ID that doesn't fit an event name is skipped with a warning in the log.
+
 ## Installation
 
 On the mirror's admin page, open **Modules**: the module is in the list, install it with one click.
