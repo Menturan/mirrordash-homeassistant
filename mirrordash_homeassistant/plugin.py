@@ -234,10 +234,6 @@ class HomeassistantModule:
         # An empty row the form saved is skipped; an id copied with a space still matches
         entity_configs = [{**c, "entity_id": c["entity_id"].strip()} for c in self.config.get("entities") or []
                           if isinstance(c, dict) and isinstance(c.get("entity_id"), str) and c["entity_id"].strip()]
-        heading = self.config.get("heading", "")
-        show_header = self.config.get("show_header", True)
-        width = self.config.get("width", "100%")
-        height = self.config.get("height", "auto")
 
         # A setting missing: say which, instead of a connection error
         missing = (self.translate("no_url", "Type your Home Assistant address in the module's settings") if not url
@@ -248,11 +244,7 @@ class HomeassistantModule:
             html = self.render_template(
                 "widget.html",
                 error=missing,
-                groups=[],
-                heading=heading,
-                show_header=show_header,
-                width=width,
-                height=height
+                groups=[]
             )
             return html
 
@@ -338,11 +330,7 @@ class HomeassistantModule:
                 groups=groups,
                 error=(self.translate("token_rejected", "Home Assistant rejected the token. Check it in the module's settings.")
                        if all_failed and self.last_error == "rejected"
-                       else self.translate("connection_error", "Connection error") if all_failed else None),
-                heading=heading,
-                show_header=show_header,
-                width=width,
-                height=height
+                       else self.translate("connection_error", "Connection error") if all_failed else None)
             )
         except Exception as fetch_err:
             logger.error(f"Error fetching states: {fetch_err}")
@@ -351,11 +339,7 @@ class HomeassistantModule:
             html = self.render_template(
                 "widget.html",
                 groups=[],
-                error=self.translate("unreachable", "Could not connect to Home Assistant"),
-                heading=heading,
-                show_header=show_header,
-                width=width,
-                height=height
+                error=self.translate("unreachable", "Could not connect to Home Assistant")
             )
 
         return html

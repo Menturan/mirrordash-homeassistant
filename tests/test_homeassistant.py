@@ -146,11 +146,7 @@ async def test_render_missing_token():
     module.render_template.assert_called_with(
         "widget.html",
         error="API Token is missing",
-        groups=[],
-        heading="",
-        show_header=True,
-        width="100%",
-        height="auto"
+        groups=[]
     )
 
 @pytest.mark.asyncio
@@ -182,34 +178,7 @@ async def test_render_missing_entities():
     module.render_template.assert_called_with(
         "widget.html",
         error="No entities configured",
-        groups=[],
-        heading="",
-        show_header=True,
-        width="100%",
-        height="auto"
-    )
-
-@pytest.mark.asyncio
-async def test_render_custom_heading():
-    config = {
-        "url": "http://localhost:8123",
-        "token": "fake_token",
-        "heading": "My Custom Devices",
-        "entities": []
-    }
-    module = HomeassistantModule(config)
-    module.render_template = MagicMock(return_value="<div>Custom Heading</div>")
-    
-    await module.render()
-            
-    module.render_template.assert_called_with(
-        "widget.html",
-        error="No entities configured",
-        groups=[],
-        heading="My Custom Devices",
-        show_header=True,
-        width="100%",
-        height="auto"
+        groups=[]
     )
 
 @pytest.mark.asyncio

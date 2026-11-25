@@ -10,7 +10,7 @@
     {% endif %}
 {%- endmacro %}
 
-<div class="ha-container" style="width: {{ width }}; height: {{ height }};">
+<div class="ha-container">
     {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
     {% endif %}
@@ -73,7 +73,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 380px;
+    max-width: 100%;
     color: var(--color-standard-gray, #999999);
 }
 

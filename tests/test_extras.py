@@ -112,11 +112,11 @@ def draw():
     entity = {"name": "Hall", "icon": "thermometer", "state": "21 °C", "is_active": False, "error": False,
               "raw_state": "21", "readings": readings}
 
-    def draw_it(layout):
+    def draw_it(layout, show_header=False, heading=""):
         block = ({"type": "detailed", "entity": entity} if layout == "detailed"
                  else {"type": "compact", "entities": [entity]})
         return env.get_template("widget.html").render(
-            translations={}, error=None, show_header=False, heading="", width="100%", height="auto",
+            translations={}, error=None, show_header=show_header, heading=heading,
             groups=[{"name": "", "blocks": [block]}])
     return draw_it
 
@@ -127,3 +127,9 @@ def test_card_draws_known_and_unknown_readings(draw, layout):
     assert 'data-lucide="battery"' in html and 'Battery <span class="ha-meta-value">87 %</span>' in html
     assert 'data-lucide="circle-dot"' in html
     assert 'Relative pressure <span class="ha-meta-value">1013</span>' in html
+
+
+def test_heading_replaces_the_title_and_show_header_hides_it(draw):
+    assert "My devices" in draw("compact", show_header=True, heading="My devices")
+    assert "Hemautomation" in draw("compact", show_header=True)
+    assert "module-header" not in draw("compact", show_header=False)

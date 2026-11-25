@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Home Assistant",
-  "requires_mirrordash": "0.19",
+  "requires_mirrordash": "0.21",
   "description": "Shows the state of lights, sensors and other devices from your Home Assistant.",
   "type": "object",
   "properties": {
@@ -15,35 +15,29 @@
     },
     "token": {
       "type": "string",
-      "title": "Long-Lived Access Token",
-      "description": "Long-Lived Access Token created in your Home Assistant profile settings.",
+      "title": "Access token",
+      "description": "Long-lived access token created in your Home Assistant profile settings.",
       "format": "password",
       "default": "",
       "shared": true
     },
-    "heading": {
-      "type": "string",
-      "default": "",
-      "title": "Custom Heading",
-      "description": "Custom title to display as the module header (overrides default)."
-    },
-    "show_header": {
-      "type": "boolean",
-      "default": true,
-      "title": "Show Header",
-      "description": "Show or hide the module's header/title."
-    },
     "layout": {
       "type": "string",
       "default": "detailed",
-      "enum": ["detailed", "compact"],
-      "title": "Layout Style",
+      "enum": [
+        "detailed",
+        "compact"
+      ],
+      "title": "Look",
       "description": "Choose between 'detailed' (large display of sensor with sub-values) or 'compact' (vertical dense list of entities with inline metadata).",
-      "enum_titles": ["Detailed", "Compact"]
+      "enum_titles": [
+        "Detailed",
+        "Compact"
+      ]
     },
     "entities": {
       "type": "array",
-      "title": "Tracked Entities",
+      "title": "Tracked entities",
       "description": "List of Home Assistant entity IDs to display.",
       "default": [],
       "items": {
@@ -56,30 +50,30 @@
           },
           "custom_name": {
             "type": "string",
-            "title": "Custom Name (Optional)",
+            "title": "Custom name",
             "description": "Override the friendly name from Home Assistant."
           },
           "custom_icon": {
             "type": "string",
             "format": "icon",
-            "title": "Custom Icon (Optional)",
+            "title": "Custom icon",
             "description": "Start typing to pick an icon (e.g. thermometer, lightbulb, house). Empty: one that fits the entity."
           },
           "group": {
             "type": "string",
-            "title": "Group Name (Optional)",
-            "description": "Optional name to group this entity under (e.g., 'Climate', 'Security')."
+            "title": "Group name",
+            "description": "Name to group this entity under (e.g., 'Climate', 'Security'). Empty: no group."
           },
           "show": {
             "type": "boolean",
             "default": true,
-            "title": "Show on the Mirror",
+            "title": "Show on the mirror",
             "description": "Show this entity in the card. Untick to keep it only for sharing with other modules."
           },
           "share": {
             "type": "boolean",
             "default": false,
-            "title": "Share with Other Modules",
+            "title": "Share with other modules",
             "description": "Send this entity's value to other modules, e.g. Weather's outdoor temperature.",
             "copy_value": "mirrordash_homeassistant.{entity_id}",
             "help": "Every update sends the public event mirrordash_homeassistant.<entity id> (e.g. mirrordash_homeassistant.sensor.outdoor_temperature). A sensor with a number sends {\"value\": 3.4, \"unit\": \"°C\", \"name\": ..., \"kind\": ...}, anything else {\"state\": \"on\", \"name\": ..., \"kind\": ...}. Any module can listen."
@@ -87,42 +81,43 @@
           "extras": {
             "type": "object",
             "format": "fields",
-            "title": "Extra Readings",
+            "title": "Extra readings",
             "description": "The entity's other readings, ticked to be shown under its value."
           },
           "layout": {
             "type": "string",
             "default": "",
-            "enum": ["", "detailed", "compact"],
-            "enum_titles": ["As the module", "Detailed", "Compact"],
-            "title": "Layout Style",
-            "description": "Visual presentation: as the module's Layout Style, 'detailed' (large single value) or 'compact' (dense list row)."
+            "enum": [
+              "",
+              "detailed",
+              "compact"
+            ],
+            "enum_titles": [
+              "As the module",
+              "Detailed",
+              "Compact"
+            ],
+            "title": "Look (this entity)",
+            "description": "'As the module', 'detailed' (large single value) or 'compact' (dense list row)."
           }
         },
-        "required": ["entity_id"]
+        "required": [
+          "entity_id"
+        ],
+        "title": "Entity"
       }
-    },
-    "width": {
-      "type": "string",
-      "default": "100%",
-      "title": "Width",
-      "description": "CSS width of the module container (e.g., 380px, 100%, 30rem).",
-      "group": "Size"
-    },
-    "height": {
-      "type": "string",
-      "default": "auto",
-      "title": "Height",
-      "description": "CSS height of the module container (e.g., auto, 300px, 100%).",
-      "group": "Size"
     },
     "interval": {
       "type": "integer",
       "default": 30,
-      "title": "Update Interval (Seconds)",
+      "title": "Update interval",
       "description": "Time to wait between state updates.",
-      "group": "Advanced"
+      "unit": "s"
     }
   },
-  "required": ["interval", "url"]
+  "required": [
+    "interval",
+    "url",
+    "token"
+  ]
 }
