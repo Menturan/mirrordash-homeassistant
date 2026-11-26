@@ -16,6 +16,19 @@ A Home Assistant data-fetcher module for MirrorDash. It connects to a local Home
 - **Home Assistant URL** and **Access Token** are shared: type them once, every Home Assistant card uses them. Each card can switch on **Own value** to use another Home Assistant.
 - **Extra Readings** (per entity) are ticked in the form, found by asking Home Assistant. Rows saved with the old Extra Readings list show none until ticked again.
 
+## Todo lists
+
+Add a todo list (an entity ID starting with `todo.`, e.g. `todo.shopping_list`) like any other entity. Its row shows the list's name and the number of open items; the items are drawn under it, each with a ring bullet, in both looks. Open items come first, in Home Assistant's order, then completed ones (struck through and dimmed) when you switch them on. A due date shows small at the right of the item: `today`, `tomorrow`, a weekday within the next 6 days, else the day and month, plus the time when the item has one. An open item that is overdue is brighter and starts with `!`.
+
+Four options per list, in the entity's settings:
+
+- **Show completed items** (default off).
+- **Max items** (default 5): at most this many items are drawn, completed ones are cut first, the rest is a line like `+3 more`.
+- **Columns** (default Auto): Auto fits as many columns as there is room for (at least about 11rem each, at most 4); 1 to 4 sets the number. Items read top to bottom, then the next column.
+- **Show items due within** (days, default empty): an item with a due date appears only when its due date is at most this many days after today (0: only items due today). Overdue items and items without a due date are always shown, completed items follow the same rule, and items left out by it are not counted in `+N more`. The open count on the row is still Home Assistant's own.
+
+The long-lived access token needs nothing extra. The items are not shared with other modules (the open count is, as for any entity). To see a list in the admin preview, add `todo.shopping_list` as an entity.
+
 ## Sharing readings with other modules
 
 Two checkboxes per entity:

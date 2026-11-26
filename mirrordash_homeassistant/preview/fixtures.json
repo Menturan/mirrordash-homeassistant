@@ -3,6 +3,7 @@
   "answers": {
     "*/api/template": "template.json",
     "*/api/states": "states.json",
+    "*/api/services/todo/get_items*": "todo_items.json",
     "*/api/states/sensor.*battery*": "battery.json",
     "*/api/states/sensor.*humidity*": "humidity.json",
     "*/api/states/sensor.*temp*": "temperature.json",
@@ -20,6 +21,7 @@
     "*/api/states/lock.*": "lock.json",
     "*/api/states/cover.*": "cover.json",
     "*/api/states/media_player.*": "media.json",
+    "*/api/states/todo.*": "todo.json",
     "*/api/states/*": "unknown.json"
   }
 }

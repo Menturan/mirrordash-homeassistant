@@ -1,10 +1,12 @@
 import asyncio
 import logging
 import re
+from datetime import datetime
 
 from .companions import DeviceMap, fetch_companions
 from .readings import entity_readings, shown_readings
 from .sharing import share_entities
+from .todo import add_todo_items, is_todo, todo_fields
 
 logger = logging.getLogger("mirrordash.modules.mirrordash_homeassistant")
 
@@ -32,7 +34,9 @@ def entity_kind(entity_id: str, attributes: dict) -> str:
     unit = attributes.get("unit_of_measurement") or ""
     words = set(re.split(r"[^a-zåäö0-9]+", entity_id.lower().split(".", 1)[-1]))
 
-    if domain == "lock" or device_class == "lock":  # a lock binary_sensor is on when unlocked
+    if domain == "todo":
+        kind = "todo"
+    elif domain == "lock" or device_class == "lock":  # a lock binary_sensor is on when unlocked
         kind = "lock"
     elif words & WASHING_WORDS:
         kind = "washing"
@@ -73,13 +77,13 @@ def resolve_smart_state_and_icon(entity_id: str, raw_state: str, attributes: dic
     unit = attributes.get("unit_of_measurement") or ""
     kind = entity_kind(entity_id, attributes)
     state_lower = raw_state.lower()
-    is_active = state_lower in ACTIVE_STATES
+    is_active = state_lower in ACTIVE_STATES or (kind == "todo" and state_lower.isdigit() and int(state_lower) > 0)
 
     icon = {"lock": "unlock" if is_active else "lock", "washing": "washing-machine", "light": "lightbulb",
             "switch": "power", "media_player": "play" if is_active else "pause" if state_lower == "paused" else "square", "camera": "video",
             "vacuum": "trash-2", "cover": "blinds", "temperature": "thermometer", "battery": "battery",
             "humidity": "droplet", "power": "zap", "motion": "activity" if is_active else "eye-off",
-            "door": "door-open" if is_active else "door-closed"}.get(kind, "info")
+            "door": "door-open" if is_active else "door-closed", "todo": "list-checks"}.get(kind, "info")
 
     on, off = STATE_WORDS.get(kind, STATE_WORDS["other"])
     if state_lower in ON_OFF_STATES:
@@ -109,6 +113,7 @@ class HomeassistantModule:
         self.interval = config.get("interval", 30)
         self.translations = config.get("translations", {})
         self.last_error = None  # fetch_json's error from the last update, e.g. "rejected"
+        self.clock = lambda: datetime.now().astimezone()  # the mirror's local time; a test sets its own
         self.device_map = DeviceMap()  # which sensors share an entity's device, kept for an hour
 
         logger.info(f"Initializing {self.name} module")
@@ -271,6 +276,11 @@ class HomeassistantModule:
             drawn = [(ent, cfg) for ent, cfg in zip(fetched_entities, entity_configs) if is_shown(cfg)]
             fetched_entities, entity_configs = [d[0] for d in drawn], [d[1] for d in drawn]
 
+            # Todo lists draw their items too (only for the rows that are shown)
+            if any(is_todo(ent["entity_id"]) for ent in fetched_entities):
+                await add_todo_items(self.fetch, url.rstrip("/"), token, fetched_entities, entity_configs,
+                                     self.clock(), self.translate)
+
             # Group entities dynamically by group name, preserving order of first appearance
             groups_ordered = []
             groups_map = {}
@@ -349,6 +359,8 @@ class HomeassistantModule:
         entity_id = (item.get("entity_id") or "").strip()
         if not entity_id:
             raise ValueError("Enter the entity ID first")
+        if is_todo(entity_id):  # a todo list has its own options, no readings to ask Home Assistant for
+            return todo_fields()
         url = (self.config.get("url") or "").strip().rstrip("/")
         token = self.config.get("token")
         if not token:

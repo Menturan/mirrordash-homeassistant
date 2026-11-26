@@ -169,5 +169,15 @@
   },
   "last_changed": "2026-11-02T07:12:00+00:00",
   "last_updated": "2026-11-02T07:12:00+00:00"
+ },
+ {
+  "entity_id": "todo.shopping_list",
+  "state": "5",
+  "attributes": {
+   "friendly_name": "Shopping list",
+   "supported_features": 15
+  },
+  "last_changed": "2026-11-02T07:12:00+00:00",
+  "last_updated": "2026-11-02T07:12:00+00:00"
  }
 ]

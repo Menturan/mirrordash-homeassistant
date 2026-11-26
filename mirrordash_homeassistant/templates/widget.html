@@ -10,6 +10,22 @@
     {% endif %}
 {%- endmacro %}
 
+{# A todo list's items under its row: entity.todo_items is [{summary, completed, due, overdue}], todo_more the "+N more" line #}
+{% macro todo_list(entity) -%}
+    {% if entity.todo_items %}
+        <ul class="ha-todo" style="{{ entity.todo_style }}">
+            {% for item in entity.todo_items %}
+                <li class="ha-todo-item{% if item.completed %} ha-todo-done{% endif %}">
+                    {% if item.completed %}<i data-lucide="check"></i>{% else %}<span class="ha-todo-bullet"></span>{% endif %}
+                    <span class="ha-todo-text">{{ item.summary }}</span>
+                    {% if item.due %}<span class="ha-todo-due{% if item.overdue %} ha-todo-overdue{% endif %}">{{ "! " if item.overdue }}{{ item.due }}</span>{% endif %}
+                </li>
+            {% endfor %}
+            {% if entity.todo_more %}<li class="ha-todo-more">{{ entity.todo_more }}</li>{% endif %}
+        </ul>
+    {% endif %}
+{%- endmacro %}
+
 <div class="ha-container">
     {% if show_header and (not error or groups) %}
         <h2 class="module-header">{{ heading or translations.get("title", "Hemautomation") }}</h2>
@@ -42,6 +58,7 @@
                                                     <span class="ha-row-value {{ tone }}">{{ entity.state }}</span>
                                                 </div>
                                                 {{ readings(entity, "ha-readings ha-readings-row") }}
+                                                {{ todo_list(entity) }}
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -55,6 +72,7 @@
                                         {# Unavailable or unknown is no reading: dimmed, not lit #}
                                         <div class="ha-value{% if entity.error %} ha-text-error{% elif entity.raw_state in ('unavailable', 'unknown') %} ha-text-inactive{% endif %}">{{ entity.state }}</div>
                                         {{ readings(entity, "ha-readings") }}
+                                        {{ todo_list(entity) }}
                                     </div>
                                 {% endif %}
                             {% endfor %}
@@ -236,6 +254,77 @@
 .ha-readings-row .ha-meta i {
     width: 12px;
     height: 12px;
+}
+
+/* Todo list: its items under the row, indented, in columns when asked (the style attribute sets them) */
+.ha-todo {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0 0 0 24px;
+    font-size: 14px;
+}
+
+.ha-todo-item,
+.ha-todo-more {
+    break-inside: avoid;
+}
+
+.ha-todo-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 3px 0;
+    color: var(--color-high-contrast, #ffffff);
+}
+
+.ha-todo-bullet {
+    flex: none;
+    box-sizing: border-box;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid var(--color-standard-gray, #999999);
+    border-radius: 50%;
+}
+
+.ha-todo-item i,
+.ha-todo-item svg {  /* lucide swaps the <i> for an <svg> */
+    flex: none;
+    width: 12px;
+    height: 12px;
+}
+
+.ha-todo-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ha-todo-due {
+    flex: none;
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-todo-due.ha-todo-overdue {
+    color: var(--color-high-contrast, #ffffff);
+}
+
+.ha-todo-done {
+    color: var(--color-dimmed-charcoal, #666666);
+}
+
+.ha-todo-done .ha-todo-text {
+    text-decoration: line-through;
+}
+
+.ha-todo-more {
+    padding: 3px 0 0 20px;
+    font-size: 13px;
+    color: var(--color-dimmed-charcoal, #666666);
 }
 
 .ha-text-active {
